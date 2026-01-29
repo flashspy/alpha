@@ -23,3 +23,11 @@ pytz>=2024.1
 
 # Tools - Search
 ddgs>=9.0.0
+
+# Vector Memory (Phase 2 - REQ-2.3)
+chromadb>=0.4.22
+sentence-transformers>=2.3.0  # Optional: for local embeddings
+voyageai>=0.2.0  # Optional: for Anthropic/Voyage embeddings
+
+# Self-Monitoring System (Phase 2 - REQ-2.4)
+psutil>=5.9.0  # System metrics collection
