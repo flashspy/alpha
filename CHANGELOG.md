@@ -4,6 +4,167 @@
 
 # <a name="english"></a>English
 
+# Alpha Auto-Skill System - v0.5.0
+
+## Update Date
+2026-01-29
+
+## Major Changes
+
+### 1. Automatic Skill Discovery and Execution
+
+**New Feature:**
+Alpha now automatically finds, downloads, installs, and executes relevant agent skills based on user queries.
+
+**Core Capabilities:**
+
+**智能技能匹配 (Intelligent Matching)**:
+- Analyzes user requests to identify keywords and intent
+- Searches skills.sh marketplace with 50+ available skills
+- Ranks skills by relevance score and popularity
+- Automatically selects the best matching skill
+
+**自动下载安装 (Auto-Installation)**:
+- Checks if skill is already installed
+- Uses `npx skills` to install missing skills automatically
+- Handles installation errors and timeouts gracefully
+- Tracks installed skills and usage statistics
+
+**动态加载执行 (Dynamic Loading)**:
+- Reads SKILL.md files and parses YAML frontmatter
+- Loads skill instructions as LLM context
+- LLM responds following skill-specific guidelines
+- Supports all skills from skills.sh marketplace
+
+**System Architecture:**
+
+```
+User Query
+    ↓
+SkillMatcher (finds relevant skills)
+    ↓
+SkillDownloader (auto-installs if needed)
+    ↓
+SkillLoader (loads SKILL.md content)
+    ↓
+AutoSkillManager (coordinates workflow)
+    ↓
+LLM (responds with skill context)
+```
+
+**Components:**
+
+1. **SkillMatcher** (`alpha/skills/matcher.py`)
+   - Keyword extraction
+   - Relevance scoring (0-10 scale)
+   - Popularity-based ranking
+
+2. **SkillDownloader** (`alpha/skills/downloader.py`)
+   - Installation check
+   - Automatic `npx skills` execution
+   - Error handling
+
+3. **SkillLoader** (`alpha/skills/loader.py`)
+   - SKILL.md parsing
+   - YAML frontmatter extraction
+   - Context formatting
+
+4. **AutoSkillManager** (`alpha/skills/auto_manager.py`)
+   - End-to-end orchestration
+   - Usage statistics
+   - Skill suggestions
+
+**Configuration:**
+```yaml
+skills:
+  auto_skill:
+    enabled: true           # Enable auto-skill
+    auto_install: true      # Auto-install missing skills
+    auto_load: true         # Auto-load skill context
+    min_score: 3.0          # Minimum relevance score
+    max_matches: 3          # Max skills to consider
+```
+
+**Usage Examples:**
+
+Example 1: React Development
+```
+User: "Help me build a performant React component"
+System:
+  1. Matches: vercel-react-best-practices (score: 7.0, 67K installs)
+  2. Already installed ✓
+  3. Loads React optimization guidelines
+  4. LLM responds with React best practices
+```
+
+Example 2: PDF Generation
+```
+User: "Create a PDF invoice"
+System:
+  1. Matches: pdf (score: 15.5, 5.2K installs)
+  2. Already installed ✓
+  3. Loads PDF creation instructions
+  4. LLM provides PDF generation steps
+```
+
+Example 3: SEO Audit
+```
+User: "Audit my website for SEO"
+System:
+  1. Matches: seo-audit (score: 5.5, 7.4K installs)
+  2. Already installed ✓
+  3. Loads SEO audit checklist
+  4. LLM performs comprehensive SEO analysis
+```
+
+**Relevance Scoring:**
+- Exact name match: +10 points
+- Keyword match: +5 points per keyword
+- Popularity bonus:
+  - >50K installs: +2 points
+  - >20K installs: +1 point
+  - >5K installs: +0.5 points
+
+**Testing:**
+```bash
+python tests/test_auto_skill.py
+```
+
+Results:
+- ✅ Skill matching: 100% pass
+- ✅ Auto-installation: 100% pass
+- ✅ Skill loading: 100% pass
+- ✅ End-to-end workflow: 100% pass
+
+**Benefits:**
+
+1. **Zero Configuration**
+   - No manual skill installation required
+   - Automatic skill discovery
+   - Intelligent best-match selection
+
+2. **Dynamic Extension**
+   - Add new skills anytime
+   - No system restart needed
+   - Instant availability
+
+3. **Context-Aware**
+   - Loads domain-specific instructions
+   - LLM gains specialized knowledge
+   - More professional responses
+
+4. **Performance Optimized**
+   - Skills cached after first use
+   - Only installs when needed
+   - Lightweight integration
+
+**Documentation:**
+- Full guide: `docs/AUTO_SKILL_SYSTEM.md`
+- Test suite: `tests/test_auto_skill.py`
+- Configuration: `config.yaml`
+
+---
+
 # Alpha Agent Skills Integration - v0.4.0
 
 ## Update Date

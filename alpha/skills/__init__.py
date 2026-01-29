@@ -10,6 +10,12 @@ from alpha.skills.marketplace import SkillMarketplace
 from alpha.skills.installer import SkillInstaller
 from alpha.skills.executor import SkillExecutor
 
+# Auto-skill system
+from alpha.skills.matcher import SkillMatcher
+from alpha.skills.downloader import SkillDownloader
+from alpha.skills.loader import SkillLoader
+from alpha.skills.auto_manager import AutoSkillManager
+
 import logging
 from pathlib import Path
 
@@ -72,4 +78,9 @@ __all__ = [
     "SkillInstaller",
     "SkillExecutor",
     "preinstall_builtin_skills",
+    # Auto-skill system
+    "SkillMatcher",
+    "SkillDownloader",
+    "SkillLoader",
+    "AutoSkillManager",
 ]
