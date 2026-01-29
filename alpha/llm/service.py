@@ -325,22 +325,98 @@ class AnthropicProvider(LLMProvider):
 
 class DeepSeekProvider(LLMProvider):
     """
-    DeepSeek API provider.
+    DeepSeek API provider with multi-model support and automatic model selection.
 
     DeepSeek API is OpenAI-compatible, so we use the same implementation
     but with DeepSeek-specific base URL and models.
     """
 
+    def __init__(self, api_key: str, model: str = None, **kwargs):
+        """
+        Initialize DeepSeek provider.
+
+        Args:
+            api_key: DeepSeek API key
+            model: Default model name (can be None if using auto-selection)
+            **kwargs: Additional configuration (models_config, default_model, auto_select_model)
+        """
+        super().__init__(api_key, model, **kwargs)
+        self.models_config = kwargs.get('models_config')
+        self.default_model = kwargs.get('default_model', 'deepseek-chat')
+        self.auto_select_model = kwargs.get('auto_select_model', False)
+
+        # Initialize model selector if multi-model config is provided
+        if self.models_config:
+            from alpha.llm.model_selector import ModelSelector
+            self.model_selector = ModelSelector(self.models_config)
+        else:
+            self.model_selector = None
+
+    def _select_model(self, messages: List[Message]) -> str:
+        """
+        Select the best model for the given messages.
+
+        Args:
+            messages: Chat messages
+
+        Returns:
+            Selected model name
+        """
+        # Use explicit model if set
+        if self.model:
+            return self.model
+
+        # Use auto-selection if enabled
+        if self.auto_select_model and self.model_selector:
+            # Convert Message objects to dicts for analyzer
+            message_dicts = [{"role": msg.role, "content": msg.content} for msg in messages]
+            return self.model_selector.select_model(message_dicts, self.default_model)
+
+        # Fall back to default model
+        return self.default_model
+
+    def _get_model_params(self, model_name: str) -> dict:
+        """
+        Get parameters for a specific model.
+
+        Args:
+            model_name: Model name
+
+        Returns:
+            Dictionary with max_tokens and temperature
+        """
+        if self.models_config and model_name in self.models_config:
+            model_config = self.models_config[model_name]
+            return {
+                'max_tokens': model_config.max_tokens,
+                'temperature': model_config.temperature
+            }
+        # Default parameters
+        return {
+            'max_tokens': self.config.get('max_tokens', 4096),
+            'temperature': self.config.get('temperature', 0.7)
+        }
+
     async def complete(
         self,
         messages: List[Message],
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
+        temperature: float = None,
+        max_tokens: int = None,
         **kwargs
     ) -> LLMResponse:
-        """Generate completion using DeepSeek API."""
+        """Generate completion using DeepSeek API with automatic model selection."""
         try:
             from openai import AsyncOpenAI
+
+            # Select the best model for this task
+            selected_model = self._select_model(messages)
+            model_params = self._get_model_params(selected_model)
+
+            # Use provided parameters or fall back to model defaults
+            actual_temperature = temperature if temperature is not None else model_params['temperature']
+            actual_max_tokens = max_tokens if max_tokens is not None else model_params['max_tokens']
+
+            logger.info(f"Using DeepSeek model: {selected_model} (temp={actual_temperature}, max_tokens={actual_max_tokens})")
 
             # DeepSeek uses OpenAI-compatible API
             client = AsyncOpenAI(
@@ -355,10 +431,10 @@ class DeepSeekProvider(LLMProvider):
             ]
 
             response = await client.chat.completions.create(
-                model=self.model,
+                model=selected_model,
                 messages=openai_messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
+                temperature=actual_temperature,
+                max_tokens=actual_max_tokens,
                 **kwargs
             )
 
@@ -376,13 +452,23 @@ class DeepSeekProvider(LLMProvider):
     async def stream_complete(
         self,
         messages: List[Message],
-        temperature: float = 0.7,
-        max_tokens: int = 4096,
+        temperature: float = None,
+        max_tokens: int = None,
         **kwargs
     ) -> AsyncIterator[str]:
-        """Stream completion using DeepSeek API."""
+        """Stream completion using DeepSeek API with automatic model selection."""
         try:
             from openai import AsyncOpenAI
+
+            # Select the best model for this task
+            selected_model = self._select_model(messages)
+            model_params = self._get_model_params(selected_model)
+
+            # Use provided parameters or fall back to model defaults
+            actual_temperature = temperature if temperature is not None else model_params['temperature']
+            actual_max_tokens = max_tokens if max_tokens is not None else model_params['max_tokens']
+
+            logger.info(f"Streaming with DeepSeek model: {selected_model}")
 
             client = AsyncOpenAI(
                 api_key=self.api_key,
@@ -395,10 +481,10 @@ class DeepSeekProvider(LLMProvider):
             ]
 
             stream = await client.chat.completions.create(
-                model=self.model,
+                model=selected_model,
                 messages=openai_messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
+                temperature=actual_temperature,
+                max_tokens=actual_max_tokens,
                 stream=True,
                 **kwargs
             )
@@ -448,11 +534,15 @@ class LLMService:
                     base_url=config.base_url
                 )
             elif name == "deepseek":
+                # Pass multi-model configuration to DeepSeek provider
                 providers[name] = DeepSeekProvider(
                     api_key=config.api_key,
-                    model=config.model,
-                    max_tokens=config.max_tokens,
-                    temperature=config.temperature
+                    model=config.model,  # Can be None if using auto-selection
+                    max_tokens=getattr(config, 'max_tokens', 4096),
+                    temperature=getattr(config, 'temperature', 0.7),
+                    models_config=config.models,
+                    default_model=getattr(config, 'default_model', 'deepseek-chat'),
+                    auto_select_model=getattr(config, 'auto_select_model', False)
                 )
 
         return cls(

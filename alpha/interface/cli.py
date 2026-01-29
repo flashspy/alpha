@@ -13,12 +13,18 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.status import Status
 
 from alpha.core.engine import AlphaEngine
 from alpha.utils.config import load_config
 from alpha.llm.service import LLMService, Message
 from alpha.tools.registry import create_default_registry
 from alpha.events.bus import EventType
+from alpha.skills.registry import SkillRegistry
+from alpha.skills.marketplace import SkillMarketplace
+from alpha.skills.installer import SkillInstaller
+from alpha.skills.executor import SkillExecutor
+from alpha.skills import preinstall_builtin_skills
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -34,10 +40,11 @@ class CLI:
     - Status display
     """
 
-    def __init__(self, engine: AlphaEngine, llm_service: LLMService, tool_registry):
+    def __init__(self, engine: AlphaEngine, llm_service: LLMService, tool_registry, skill_executor: SkillExecutor = None):
         self.engine = engine
         self.llm_service = llm_service
         self.tool_registry = tool_registry
+        self.skill_executor = skill_executor
         self.conversation_history: list[Message] = []
 
         # System prompt
@@ -46,11 +53,19 @@ class CLI:
 You have access to the following tools:
 {tools}
 
+You also have access to Agent Skills (dynamic capabilities):
+{skills}
+
 IMPORTANT INSTRUCTIONS:
 
 1. When you need to use tools, respond in this format:
 
    TOOL: <tool_name>
+   PARAMS: <json_or_yaml_params>
+
+   When you need to use skills, respond in this format:
+
+   SKILL: <skill_name>
    PARAMS: <json_or_yaml_params>
 
    You can use either single-line JSON or multi-line YAML for PARAMS:
@@ -60,16 +75,21 @@ IMPORTANT INSTRUCTIONS:
                   url: "https://example.com"
                   method: "GET"
 
-   You can call multiple tools in one response.
+   You can call multiple tools/skills in one response.
 
-   CRITICAL: Tool call lines (TOOL: and PARAMS:) are automatically hidden from users.
+   CRITICAL: Tool/Skill call lines (TOOL:/SKILL: and PARAMS:) are automatically hidden from users.
    Users NEVER see these technical details - they only see your natural language messages.
 
-2. When you receive tool results (marked as "Tool execution results:"),
+2. SKILLS vs TOOLS:
+   - Tools: Built-in capabilities (shell, file, search, http, datetime, calculator)
+   - Skills: Dynamic capabilities that can be auto-discovered and installed
+   - If a skill is not installed, Alpha will try to auto-discover and install it
+
+3. When you receive tool/skill results (marked as "Tool execution results:"),
    DO NOT call more tools. Instead, provide a clear, natural language answer
    to the user based on the results.
 
-3. TOOL USAGE STRATEGIES:
+4. TOOL USAGE STRATEGIES:
    - For weather queries: Use HTTP tool with https://wttr.in/{{city}}?format=j1&lang=zh-cn
    - For real-time information:
      * PREFERRED: Use Search tool to find latest data
@@ -83,7 +103,7 @@ IMPORTANT INSTRUCTIONS:
    - News: Suggest user to visit specific websites directly
    - General info: Explain that search is unavailable due to network issues
 
-4. Be concise and helpful. Focus on what the user needs to know."""
+5. Be concise and helpful. Focus on what the user needs to know."""
 
     async def start(self):
         """Start interactive CLI."""
@@ -97,8 +117,15 @@ IMPORTANT INSTRUCTIONS:
         tools = self.tool_registry.list_tools()
         tools_desc = "\n".join([f"- {t['name']}: {t['description']}" for t in tools])
 
+        # Display available skills
+        skills_desc = "No skills installed yet. Skills can be auto-discovered and installed on-demand."
+        if self.skill_executor:
+            skills = self.skill_executor.list_installed_skills()
+            if skills:
+                skills_desc = "\n".join([f"- {s['name']} (v{s['version']}): {s['description']}" for s in skills])
+
         # Initialize system message
-        system_msg = self.system_prompt.format(tools=tools_desc)
+        system_msg = self.system_prompt.format(tools=tools_desc, skills=skills_desc)
         self.conversation_history.append(Message(role="system", content=system_msg))
 
         while True:
@@ -125,6 +152,15 @@ IMPORTANT INSTRUCTIONS:
                 if user_input.lower() == 'clear':
                     self.conversation_history = [self.conversation_history[0]]
                     console.print("[yellow]Conversation cleared[/yellow]")
+                    continue
+
+                if user_input.lower() == 'skills':
+                    await self._show_skills()
+                    continue
+
+                if user_input.lower().startswith('search skill '):
+                    query = user_input[13:].strip()
+                    await self._search_skills(query)
                     continue
 
                 # Process user message
@@ -157,6 +193,10 @@ IMPORTANT INSTRUCTIONS:
 
             # Generate response (may contain tool calls)
             try:
+                # Show thinking indicator for first iteration
+                if iteration == 1:
+                    console.print("[dim]Thinking...[/dim]")
+
                 response_text = ""
                 async for chunk in self.llm_service.stream_complete(
                     self.conversation_history
@@ -226,24 +266,37 @@ IMPORTANT INSTRUCTIONS:
             console.print(f"\n[yellow]Warning: Maximum tool iterations reached[/yellow]")
 
     def _parse_tool_calls(self, response: str) -> list:
-        """Parse tool calls from response."""
+        """Parse tool and skill calls from response."""
         import json
         import yaml
 
-        tool_calls = []
+        calls = []
         lines = response.split('\n')
-        current_tool = None
+        current_call = None
+        current_type = None  # 'tool' or 'skill'
         current_params = None
         params_lines = []
         in_params_block = False
 
         for i, line in enumerate(lines):
             if line.startswith("TOOL:"):
-                # Save previous tool call if exists
-                if current_tool and current_params:
-                    tool_calls.append({"tool": current_tool, "params": current_params})
+                # Save previous call if exists
+                if current_call and current_params and current_type:
+                    calls.append({"type": current_type, "name": current_call, "params": current_params})
 
-                current_tool = line.replace("TOOL:", "").strip()
+                current_call = line.replace("TOOL:", "").strip()
+                current_type = "tool"
+                current_params = None
+                params_lines = []
+                in_params_block = False
+
+            elif line.startswith("SKILL:"):
+                # Save previous call if exists
+                if current_call and current_params and current_type:
+                    calls.append({"type": current_type, "name": current_call, "params": current_params})
+
+                current_call = line.replace("SKILL:", "").strip()
+                current_type = "skill"
                 current_params = None
                 params_lines = []
                 in_params_block = False
@@ -280,13 +333,13 @@ IMPORTANT INSTRUCTIONS:
                                 # Try JSON
                                 current_params = json.loads(params_text)
                             except:
-                                logger.warning(f"Failed to parse tool params: {params_text}")
+                                logger.warning(f"Failed to parse params: {params_text}")
                                 current_params = None
                     in_params_block = False
                     params_lines = []
 
-        # Handle last tool call
-        if current_tool:
+        # Handle last call
+        if current_call and current_type:
             if in_params_block and params_lines:
                 # Parse remaining params
                 params_text = '\n'.join(params_lines)
@@ -296,23 +349,23 @@ IMPORTANT INSTRUCTIONS:
                     try:
                         current_params = json.loads(params_text)
                     except:
-                        logger.warning(f"Failed to parse tool params: {params_text}")
+                        logger.warning(f"Failed to parse params: {params_text}")
                         current_params = None
 
             if current_params:
-                tool_calls.append({"tool": current_tool, "params": current_params})
+                calls.append({"type": current_type, "name": current_call, "params": current_params})
 
-        return tool_calls
+        return calls
 
     def _extract_user_message(self, response: str) -> str:
-        """Extract user-facing message by removing tool call lines."""
+        """Extract user-facing message by removing tool and skill call lines."""
         lines = response.split('\n')
         user_lines = []
         in_params_block = False
 
         for line in lines:
-            if line.startswith("TOOL:"):
-                # Skip TOOL: line
+            if line.startswith("TOOL:") or line.startswith("SKILL:"):
+                # Skip TOOL:/SKILL: line
                 continue
             elif line.startswith("PARAMS:"):
                 # Skip PARAMS: line and start params block
@@ -328,52 +381,103 @@ IMPORTANT INSTRUCTIONS:
                     in_params_block = False
                     # Don't skip this line, it's user content
 
-            # Add non-tool-call lines
+            # Add non-tool/skill-call lines
             user_lines.append(line)
 
         return '\n'.join(user_lines).strip()
 
     async def _execute_tools(self, tool_calls: list) -> list:
-        """Execute multiple tool calls."""
+        """Execute multiple tool/skill calls."""
         results = []
 
         for call in tool_calls:
-            tool_name = call["tool"]
+            call_type = call.get("type", "tool")  # Default to tool for backward compatibility
+            call_name = call.get("name") or call.get("tool")  # Support both formats
             params = call["params"]
 
-            logger.info(f"Executing tool: {tool_name} with params: {params}")
+            if call_type == "skill":
+                # Execute skill
+                logger.info(f"Executing skill: {call_name} with params: {params}")
 
-            result = await self.tool_registry.execute_tool(tool_name, **params)
+                if not self.skill_executor:
+                    results.append({
+                        "type": "skill",
+                        "name": call_name,
+                        "success": False,
+                        "output": None,
+                        "error": "Skill executor not available"
+                    })
+                    continue
 
-            results.append({
-                "tool": tool_name,
-                "success": result.success,
-                "output": result.output,
-                "error": result.error
-            })
+                with console.status(f"[cyan]Executing skill: {call_name}...[/cyan]"):
+                    result = await self.skill_executor.execute(call_name, **params)
 
-            # Publish event
-            await self.engine.event_bus.publish_event(
-                EventType.TOOL_EXECUTED,
-                {
-                    "tool": tool_name,
-                    "params": params,
-                    "success": result.success
-                }
-            )
+                results.append({
+                    "type": "skill",
+                    "name": call_name,
+                    "success": result.success,
+                    "output": result.output,
+                    "error": result.error
+                })
+
+                # Publish event
+                await self.engine.event_bus.publish_event(
+                    EventType.TOOL_EXECUTED,  # Reuse TOOL_EXECUTED event for now
+                    {
+                        "type": "skill",
+                        "skill": call_name,
+                        "params": params,
+                        "success": result.success
+                    }
+                )
+
+            else:
+                # Execute tool
+                logger.info(f"Executing tool: {call_name} with params: {params}")
+
+                with console.status(f"[cyan]Executing tool: {call_name}...[/cyan]"):
+                    result = await self.tool_registry.execute_tool(call_name, **params)
+
+                results.append({
+                    "type": "tool",
+                    "name": call_name,
+                    "success": result.success,
+                    "output": result.output,
+                    "error": result.error
+                })
+
+                # Publish event
+                await self.engine.event_bus.publish_event(
+                    EventType.TOOL_EXECUTED,
+                    {
+                        "type": "tool",
+                        "tool": call_name,
+                        "params": params,
+                        "success": result.success
+                    }
+                )
 
         return results
 
     def _format_tool_results(self, results: list) -> str:
-        """Format tool results for LLM."""
+        """Format tool/skill results for LLM."""
         formatted = []
 
         for result in results:
+            result_type = result.get("type", "tool")
+            result_name = result.get("name") or result.get("tool")  # Support both formats
+
             if result["success"]:
-                formatted.append(f"Tool '{result['tool']}' succeeded:")
+                if result_type == "skill":
+                    formatted.append(f"Skill '{result_name}' succeeded:")
+                else:
+                    formatted.append(f"Tool '{result_name}' succeeded:")
                 formatted.append(f"{result['output']}")
             else:
-                formatted.append(f"Tool '{result['tool']}' failed:")
+                if result_type == "skill":
+                    formatted.append(f"Skill '{result_name}' failed:")
+                else:
+                    formatted.append(f"Tool '{result_name}' failed:")
                 formatted.append(f"Error: {result['error']}")
 
         return '\n\n'.join(formatted)
@@ -390,15 +494,83 @@ IMPORTANT INSTRUCTIONS:
 
 - **help**: Show this help message
 - **status**: Show system status
+- **skills**: List installed skills
+- **search skill <query>**: Search for available skills
 - **clear**: Clear conversation history
 - **quit/exit**: Exit Alpha
 
 # Usage
 
 Just type your question or request, and Alpha will help you.
-Alpha has access to tools like shell commands, file operations, and web search.
+Alpha has access to:
+- **Tools**: Built-in capabilities (shell, file, search, http, datetime, calculator)
+- **Skills**: Dynamic capabilities that can be auto-discovered and installed on-demand
         """
         console.print(Markdown(help_text))
+
+    async def _show_skills(self):
+        """Show installed skills."""
+        if not self.skill_executor:
+            console.print("[yellow]Skill system not available[/yellow]")
+            return
+
+        skills = self.skill_executor.list_installed_skills()
+
+        if not skills:
+            skills_text = """
+# Installed Skills
+
+No skills installed yet.
+
+Skills can be auto-discovered and installed on-demand when you use them.
+Use `search skill <query>` to find available skills.
+            """
+        else:
+            skills_list = "\n".join([
+                f"- **{s['name']}** (v{s['version']}) - {s['description']}\n  Category: {s['category']}, Author: {s['author']}"
+                for s in skills
+            ])
+            skills_text = f"""
+# Installed Skills
+
+{skills_list}
+            """
+
+        console.print(Markdown(skills_text))
+
+    async def _search_skills(self, query: str):
+        """Search for available skills."""
+        if not self.skill_executor:
+            console.print("[yellow]Skill system not available[/yellow]")
+            return
+
+        console.print(f"[blue]Searching for skills: {query}...[/blue]")
+
+        try:
+            results = await self.skill_executor.discover_skills(query)
+
+            if not results:
+                console.print(f"[yellow]No skills found matching '{query}'[/yellow]")
+                return
+
+            results_list = "\n".join([
+                f"- **{s.name}** (v{s.version}) - {s.description}\n  Category: {s.category}, Author: {s.author}"
+                for s in results
+            ])
+
+            results_text = f"""
+# Available Skills
+
+{results_list}
+
+These skills can be automatically installed when you use them.
+            """
+
+            console.print(Markdown(results_text))
+
+        except Exception as e:
+            console.print(f"[bold red]Error searching skills:[/bold red] {e}")
+            logger.error(f"Skill search error: {e}", exc_info=True)
 
     async def _show_status(self):
         """Show system status."""
@@ -441,8 +613,26 @@ async def run_cli():
         # Create tool registry
         tool_registry = create_default_registry()
 
+        # Create skill system
+        skill_registry = SkillRegistry()
+        skill_marketplace = SkillMarketplace()
+        skill_installer = SkillInstaller()
+
+        # Preinstall builtin skills
+        console.print("[blue]Loading builtin skills...[/blue]")
+        installed_count = await preinstall_builtin_skills(skill_registry, skill_installer)
+        if installed_count > 0:
+            console.print(f"[green]✓[/green] Loaded {installed_count} builtin skills")
+
+        skill_executor = SkillExecutor(
+            registry=skill_registry,
+            marketplace=skill_marketplace,
+            installer=skill_installer,
+            auto_install=True
+        )
+
         # Create and start CLI
-        cli = CLI(engine, llm_service, tool_registry)
+        cli = CLI(engine, llm_service, tool_registry, skill_executor)
 
         # Start engine in background
         engine_task = asyncio.create_task(engine.run())

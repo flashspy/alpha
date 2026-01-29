@@ -1,0 +1,14 @@
+name: example-skill
+version: "1.0.0"
+description: "Example skill that demonstrates the Agent Skill system"
+author: "Alpha Team"
+category: "example"
+tags:
+  - example
+  - demo
+  - tutorial
+dependencies: []
+python_version: ">=3.8"
+homepage: "https://github.com/alpha-ai/skills/example-skill"
+repository: "https://github.com/alpha-ai/skills/example-skill"
+license: "MIT"

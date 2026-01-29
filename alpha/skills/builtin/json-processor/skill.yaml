@@ -1,0 +1,15 @@
+name: json-processor
+version: "1.0.0"
+description: "JSON parsing, formatting, validation and transformation"
+author: "Alpha Team"
+category: "data"
+tags:
+  - json
+  - data
+  - parsing
+  - formatting
+dependencies: []
+python_version: ">=3.8"
+homepage: "https://github.com/alpha-ai/skills/json-processor"
+repository: "https://github.com/alpha-ai/skills/json-processor"
+license: "MIT"

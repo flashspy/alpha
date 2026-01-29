@@ -4,6 +4,367 @@
 
 # <a name="english"></a>English
 
+# Alpha Builtin Skills - v0.3.1
+
+## Update Date
+2026-01-29
+
+## Major Changes
+
+### 1. Preinstalled Builtin Skills
+
+**New Feature:**
+3 commonly used skills are now preinstalled and ready to use immediately.
+
+**Builtin Skills:**
+- ✅ **text-processing** - Advanced text processing and transformation
+  - 20+ operations: uppercase, lowercase, reverse, split, replace, extract emails/URLs/numbers, etc.
+  - No dependencies, pure Python
+  - Optimized for performance
+
+- ✅ **json-processor** - JSON parsing, formatting, and transformation
+  - 8 operations: parse, stringify, format, minify, validate, extract, merge, filter
+  - Handle complex JSON with path-based extraction
+  - Validation with detailed error messages
+
+- ✅ **data-analyzer** - Statistical analysis and data aggregation
+  - 17 operations: mean, median, mode, min, max, variance, stdev, percentile, etc.
+  - Data operations: group_by, aggregate, sort, filter
+  - Complete statistical summary
+
+**Automatic Loading:**
+- Skills are automatically preinstalled at startup
+- No configuration required
+- Shows loading progress: "Loading builtin skills... ✓ Loaded 3 builtin skills"
+- Instant availability, no download needed
+
+**Skill Registry:**
+- Builtin skills registry at `alpha/skills/builtin/registry.json`
+- SkillMarketplace automatically includes builtin skills
+- Builtin skills have priority over remote skills
+
+**Visual Feedback:**
+- Added loading spinner for skill/tool execution
+- Status display shows "Executing skill: {name}..." during execution
+- Improved user experience with visual feedback
+
+**Documentation:**
+- ✅ `docs/BUILTIN_SKILLS.md` - Complete reference for all builtin skills
+- Detailed operation descriptions and usage examples
+- Troubleshooting guide
+
+**Testing:**
+- ✅ `tests/test_builtin_skills.py` - Comprehensive builtin skills test
+- All 3 skills tested and verified
+- 100% test pass rate
+
+### 2. Preinstallation Mechanism
+
+**Implementation:**
+- New `preinstall_builtin_skills()` function in `alpha/skills/__init__.py`
+- Automatically discovers and installs all builtin skills
+- Integrated into CLI startup process
+- No user interaction required
+
+**Files Modified:**
+- `alpha/skills/__init__.py` - Added preinstall function
+- `alpha/skills/marketplace.py` - Added builtin skills support
+- `alpha/interface/cli.py` - Integrated preinstallation
+
+### 3. Enhanced User Experience
+
+**Visual Improvements:**
+- Loading progress indicator
+- Success message with skill count
+- Execution status spinner (from Status import)
+- Clear visual feedback during operations
+
+## Files Created
+
+### Builtin Skills
+- `alpha/skills/builtin/text-processing/skill.yaml` - Metadata
+- `alpha/skills/builtin/text-processing/skill.py` - Implementation (150 lines)
+- `alpha/skills/builtin/json-processor/skill.yaml` - Metadata
+- `alpha/skills/builtin/json-processor/skill.py` - Implementation (180 lines)
+- `alpha/skills/builtin/data-analyzer/skill.yaml` - Metadata
+- `alpha/skills/builtin/data-analyzer/skill.py` - Implementation (250 lines)
+- `alpha/skills/builtin/registry.json` - Builtin skills registry
+
+### Documentation
+- `docs/BUILTIN_SKILLS.md` - Complete builtin skills reference
+
+### Testing
+- `tests/test_builtin_skills.py` - Builtin skills test suite
+
+## Testing
+
+Run builtin skills tests:
+
+```bash
+source venv/bin/activate
+python tests/test_builtin_skills.py
+```
+
+Expected output:
+```
+================================================================================
+✓ ALL TESTS PASSED
+================================================================================
+Successfully preinstalled and tested 3 builtin skills
+```
+
+## Usage Examples
+
+### Text Processing
+```
+You: Convert "hello world" to uppercase
+
+Alpha: SKILL: text-processing
+PARAMS:
+  operation: "uppercase"
+  text: "hello world"
+
+Result: "HELLO WORLD"
+```
+
+### JSON Processing
+```
+You: Parse this JSON: {"name": "Alpha"}
+
+Alpha: SKILL: json-processor
+PARAMS:
+  operation: "parse"
+  json_str: '{"name": "Alpha"}'
+
+Result: {name: "Alpha"}
+```
+
+### Data Analysis
+```
+You: Calculate average of [1, 2, 3, 4, 5]
+
+Alpha: SKILL: data-analyzer
+PARAMS:
+  operation: "mean"
+  data: [1, 2, 3, 4, 5]
+
+Result: 3.0
+```
+
+## Benefits
+
+1. **Instant Availability** - Skills ready immediately, no installation
+2. **Offline Ready** - No internet required for builtin skills
+3. **Fast Performance** - Optimized, no external dependencies
+4. **Reliable** - Tested and maintained by Alpha team
+5. **Common Use Cases** - Cover most text, JSON, and data operations
+
+## Breaking Changes
+
+None - fully backward compatible with v0.3.0
+
+## Upgrade Instructions
+
+No action required. Builtin skills will be automatically loaded on next start.
+
+---
+
+# Alpha Agent Skill System - v0.3.0
+
+## Update Date
+2026-01-29
+
+## Major Changes
+
+### 1. Agent Skill System - Dynamic Capability Expansion
+
+**New Feature:**
+Complete Agent Skill system implementation enabling dynamic discovery, installation, and execution of skills.
+
+**Key Components:**
+- ✅ **AgentSkill Base Class** - Abstract base for creating skills
+- ✅ **SkillRegistry** - Manage installed skills and lifecycle
+- ✅ **SkillMarketplace** - Discover and download skills from repositories
+- ✅ **SkillInstaller** - Install skills and manage dependencies
+- ✅ **SkillExecutor** - Execute skills with auto-install support
+
+**Features:**
+- 🔍 **Auto-Discovery** - Automatically find skills in marketplace
+- 📦 **Auto-Installation** - Install skills on-demand when needed
+- ♻️ **Reusable** - Skills can be used across different tasks
+- 📚 **Versioned** - Support for skill versioning
+- 🏪 **Marketplace** - Search and browse available skills
+- 🧪 **Fully Tested** - Comprehensive test suite with 100% pass rate
+
+**CLI Integration:**
+- New `skills` command - List installed skills
+- New `search skill <query>` command - Search for available skills
+- Support for `SKILL:` directive in LLM responses
+- Skills auto-install when referenced in conversations
+
+**Example Usage:**
+```
+You: Convert "hello world" to uppercase
+
+Alpha: I'll use the text-processing skill for this.
+
+SKILL: text-processing
+PARAMS:
+  operation: "uppercase"
+  text: "hello world"
+
+Result: "HELLO WORLD"
+```
+
+**Example Skill Created:**
+- ✅ `examples/skills/example-skill/` - Demonstrates skill structure
+- Features text transformation capabilities
+- Includes comprehensive documentation
+
+**Documentation:**
+- ✅ `docs/AGENT_SKILLS.md` - Complete technical documentation
+- ✅ `docs/AGENT_SKILLS_QUICKSTART.md` - Quick start guide
+- ✅ API reference and best practices
+- ✅ Troubleshooting guide
+
+**Testing:**
+- ✅ `tests/test_agent_skills.py` - Comprehensive test suite
+- All tests passing (20+ test cases)
+- Tests cover: metadata, registry, installer, marketplace, executor
+
+### 2. Enhanced System Prompt
+
+**Updates:**
+- Added Skills vs Tools distinction
+- Explained auto-discovery and auto-install behavior
+- Added SKILL: directive documentation
+- Clarified when to use skills vs tools
+
+### 3. Parser Enhancement
+
+**Changes:**
+- Extended `_parse_tool_calls()` to support SKILL: directive
+- Extended `_extract_user_message()` to filter SKILL: lines
+- Backward compatible with existing tool calls
+- Support for mixed tool/skill calls in single response
+
+### 4. CLI Enhancements
+
+**New Features:**
+- Skills system integration
+- New commands for skill management
+- Enhanced help text with skill information
+- Skill execution with auto-install
+
+## Architecture
+
+### Skills vs Tools
+
+| Feature | Tools | Skills |
+|---------|-------|--------|
+| Built-in | ✅ Yes | ❌ No |
+| Dynamic Install | ❌ No | ✅ Yes |
+| Versioning | ❌ No | ✅ Yes |
+| Dependencies | ❌ No | ✅ Yes |
+| Marketplace | ❌ No | ✅ Yes |
+| Community Contributed | ❌ No | ✅ Yes |
+
+### Skill Structure
+
+```
+skill-name/
+├── skill.yaml        # Metadata (required)
+├── skill.py          # Implementation (required)
+├── README.md         # Documentation (optional)
+└── requirements.txt  # Dependencies (optional)
+```
+
+## Breaking Changes
+
+None - fully backward compatible with v0.2.0
+
+## Upgrade Instructions
+
+### From v0.2.0
+
+No changes required. The skill system is automatically available and optional.
+
+To enable auto-install (enabled by default):
+```python
+# In run_cli()
+skill_executor = SkillExecutor(
+    registry=skill_registry,
+    marketplace=skill_marketplace,
+    installer=skill_installer,
+    auto_install=True  # Default
+)
+```
+
+## Known Limitations
+
+1. **Sandboxing** - Skills currently run without isolation (planned for v0.4.0)
+2. **Permission System** - No fine-grained permissions yet (planned for v0.4.0)
+3. **Marketplace UI** - CLI-only, no web interface (planned for v0.5.0)
+4. **Repository Support** - Currently GitHub only (GitLab support planned)
+
+## Future Roadmap
+
+### v0.4.0 (Planned)
+- 🔐 Sandboxed skill execution
+- 🎯 Permission system for skills
+- 📊 Skill usage analytics
+- 🔗 Skill dependencies on other skills
+
+### v0.5.0 (Planned)
+- 🌐 Web-based skill marketplace
+- 🏪 Skill ratings and reviews
+- 📦 Skill packaging and distribution
+- 🔄 Auto-update for skills
+
+## Files Modified/Created
+
+### New Files
+- `alpha/skills/__init__.py` - Skill module initialization
+- `alpha/skills/base.py` - Base classes and data structures
+- `alpha/skills/registry.py` - Skill registry implementation
+- `alpha/skills/marketplace.py` - Marketplace implementation
+- `alpha/skills/installer.py` - Installer implementation
+- `alpha/skills/executor.py` - Executor implementation
+- `examples/skills/example-skill/` - Example skill
+- `tests/test_agent_skills.py` - Test suite
+- `docs/AGENT_SKILLS.md` - Technical documentation
+- `docs/AGENT_SKILLS_QUICKSTART.md` - Quick start guide
+
+### Modified Files
+- `alpha/interface/cli.py` - Integrated skill system
+  - Added skill_executor parameter
+  - Enhanced system prompt with SKILL: support
+  - Added skills and search skill commands
+  - Extended parser for SKILL: directive
+  - Modified execution flow for skills
+
+## Testing
+
+Run the skill system tests:
+
+```bash
+source venv/bin/activate
+python tests/test_agent_skills.py
+```
+
+Expected output:
+```
+================================================================================
+✓ ALL TESTS PASSED
+================================================================================
+```
+
+## Contributors
+
+- Alpha Development Team
+
+---
+
 # Alpha Enhancement - v0.2.0
 
 ## Update Date

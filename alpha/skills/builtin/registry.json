@@ -1,0 +1,59 @@
+{
+  "skills": [
+    {
+      "name": "text-processing",
+      "version": "1.0.0",
+      "description": "Advanced text processing and transformation",
+      "author": "Alpha Team",
+      "category": "utility",
+      "tags": ["text", "string", "processing", "transformation"],
+      "dependencies": [],
+      "python_version": ">=3.8",
+      "homepage": "https://github.com/alpha-ai/skills/text-processing",
+      "repository": "builtin",
+      "license": "MIT",
+      "builtin": true
+    },
+    {
+      "name": "json-processor",
+      "version": "1.0.0",
+      "description": "JSON parsing, formatting, validation and transformation",
+      "author": "Alpha Team",
+      "category": "data",
+      "tags": ["json", "data", "parsing", "formatting"],
+      "dependencies": [],
+      "python_version": ">=3.8",
+      "homepage": "https://github.com/alpha-ai/skills/json-processor",
+      "repository": "builtin",
+      "license": "MIT",
+      "builtin": true
+    },
+    {
+      "name": "data-analyzer",
+      "version": "1.0.0",
+      "description": "Statistical analysis and data aggregation",
+      "author": "Alpha Team",
+      "category": "data",
+      "tags": ["statistics", "data", "analysis", "aggregation"],
+      "dependencies": [],
+      "python_version": ">=3.8",
+      "homepage": "https://github.com/alpha-ai/skills/data-analyzer",
+      "repository": "builtin",
+      "license": "MIT",
+      "builtin": true
+    },
+    {
+      "name": "example-skill",
+      "version": "1.0.0",
+      "description": "Example skill that demonstrates the Agent Skill system",
+      "author": "Alpha Team",
+      "category": "example",
+      "tags": ["example", "demo", "tutorial"],
+      "dependencies": [],
+      "python_version": ">=3.8",
+      "homepage": "https://github.com/alpha-ai/skills/example-skill",
+      "repository": "https://github.com/alpha-ai/skills/example-skill",
+      "license": "MIT"
+    }
+  ]
+}

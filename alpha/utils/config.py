@@ -12,13 +12,24 @@ from typing import Dict, List
 
 
 @dataclass
+class ModelConfig:
+    """Individual model configuration."""
+    max_tokens: int = 4096
+    temperature: float = 0.7
+    difficulty_range: List[str] = None
+
+
+@dataclass
 class LLMProviderConfig:
     """LLM provider configuration."""
     api_key: str
-    model: str
+    model: str = None
     base_url: str = None
     max_tokens: int = 4096
     temperature: float = 0.7
+    default_model: str = None
+    auto_select_model: bool = False
+    models: Dict[str, ModelConfig] = None
 
 
 @dataclass
@@ -95,7 +106,24 @@ def load_config(config_path: str = "config.yaml") -> Config:
     # Build LLM providers
     providers = {}
     for name, provider_data in llm_config.get('providers', {}).items():
-        providers[name] = LLMProviderConfig(**provider_data)
+        # Parse model configurations if present
+        models_config = None
+        if 'models' in provider_data:
+            models_config = {}
+            for model_name, model_data in provider_data['models'].items():
+                models_config[model_name] = ModelConfig(
+                    max_tokens=model_data.get('max_tokens', 4096),
+                    temperature=model_data.get('temperature', 0.7),
+                    difficulty_range=model_data.get('difficulty_range', [])
+                )
+
+            # Remove 'models' from provider_data before creating LLMProviderConfig
+            provider_data_copy = provider_data.copy()
+            provider_data_copy.pop('models')
+            provider_data_copy['models'] = models_config
+            providers[name] = LLMProviderConfig(**provider_data_copy)
+        else:
+            providers[name] = LLMProviderConfig(**provider_data)
 
     return Config(
         name=alpha_config.get('name', 'Alpha'),
