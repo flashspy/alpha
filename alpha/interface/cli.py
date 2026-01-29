@@ -25,6 +25,7 @@ from alpha.skills.marketplace import SkillMarketplace
 from alpha.skills.installer import SkillInstaller
 from alpha.skills.executor import SkillExecutor
 from alpha.skills import preinstall_builtin_skills
+from alpha.skills.auto_manager import AutoSkillManager
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -40,15 +41,22 @@ class CLI:
     - Status display
     """
 
-    def __init__(self, engine: AlphaEngine, llm_service: LLMService, tool_registry, skill_executor: SkillExecutor = None):
+    def __init__(self, engine: AlphaEngine, llm_service: LLMService, tool_registry, skill_executor: SkillExecutor = None, auto_skill_manager: AutoSkillManager = None):
         self.engine = engine
         self.llm_service = llm_service
         self.tool_registry = tool_registry
         self.skill_executor = skill_executor
+        self.auto_skill_manager = auto_skill_manager
         self.conversation_history: list[Message] = []
 
         # System prompt
-        self.system_prompt = """You are Alpha, a helpful AI assistant.
+        self.system_prompt = """You are Alpha, a Personal Super AI Assistant.
+
+CORE PHILOSOPHY:
+- Your mission is to "not merely assist but amaze and intrigue humans at every interaction"
+- Turn vague requests into completed tasks with precision and initiative
+- NEVER give up on a task - always try multiple approaches until successful
+- When one method fails, automatically try alternative solutions without asking the user
 
 You have access to the following tools:
 {tools}
@@ -89,21 +97,46 @@ IMPORTANT INSTRUCTIONS:
    DO NOT call more tools. Instead, provide a clear, natural language answer
    to the user based on the results.
 
-4. TOOL USAGE STRATEGIES:
-   - For weather queries: Use HTTP tool with https://wttr.in/{{city}}?format=j1&lang=zh-cn
-   - For real-time information:
-     * PREFERRED: Use Search tool to find latest data
-     * IF Search fails (network issues): Use HTTP tool with known APIs directly
-   - For specific data: Use HTTP tool if you know the API endpoint
-   - For complex tasks: Combine tools (e.g., DateTime + Search for time-sensitive queries)
+4. NEVER GIVE UP PRINCIPLE:
+   When a tool fails, YOU MUST automatically try alternative approaches. NEVER simply tell the user
+   "I cannot do this" or "service is unavailable" without exhausting all options.
 
-   FALLBACK STRATEGY when Search tool fails:
-   - Stock market: Use HTTP with https://hq.sinajs.cn/list=sh000001,sz399001,sz399006 (China markets)
-   - Weather: Use HTTP with https://wttr.in/{{city}}?format=j1&lang=zh-cn
-   - News: Suggest user to visit specific websites directly
-   - General info: Explain that search is unavailable due to network issues
+   MANDATORY MULTI-APPROACH STRATEGY:
 
-5. Be concise and helpful. Focus on what the user needs to know."""
+   a) For Stock Market / Real-time Financial Data:
+      Approach 1: Try Search tool first
+      Approach 2: If Search fails → Use HTTP with https://hq.sinajs.cn/list=sh000001,sz399001,sz399006
+      Approach 3: If HTTP fails → Try alternative API: https://qt.gtimg.cn/q=sh000001,sz399001
+      Approach 4: If all APIs fail → Use HTTP to scrape from https://finance.sina.com.cn
+      ONLY give up after trying ALL approaches
+
+   b) For Weather:
+      Approach 1: Try Search tool first
+      Approach 2: If Search fails → Use HTTP with https://wttr.in/{{city}}?format=j1&lang=zh-cn
+      Approach 3: If wttr.in fails → Try http://www.weather.com.cn/data/cityinfo/{{city_code}}.html
+      Approach 4: If all fail → Try scraping from weather websites
+
+   c) For News / Current Events:
+      Approach 1: Try Search tool
+      Approach 2: If Search fails → Use HTTP to fetch RSS feeds
+      Approach 3: If RSS fails → Try scraping news websites directly
+
+   d) For General Information:
+      Approach 1: Try Search tool
+      Approach 2: If Search fails → Try HTTP to query knowledge APIs
+      Approach 3: If APIs fail → Use reasoning and existing knowledge
+      NEVER just say "search is unavailable" - always provide the best answer you can
+
+   EXECUTION RULE: After each failed attempt, immediately inform the user "Approach X failed, trying Approach Y..."
+   This shows persistence and builds confidence.
+
+5. TOOL USAGE STRATEGIES:
+   - Always start with the most direct approach
+   - If it fails, automatically move to alternative methods
+   - Combine multiple tools if needed (e.g., HTTP + DateTime for time-sensitive data)
+   - Show determination: "Let me try another way..." "I'll use a different method..."
+
+6. Be concise, proactive, and solution-oriented. Your goal is to COMPLETE the task, not just explain why it failed."""
 
     async def start(self):
         """Start interactive CLI."""
@@ -183,6 +216,32 @@ IMPORTANT INSTRUCTIONS:
             role="user",
             content=user_input
         )
+
+        # Auto-skill: Try to match and load relevant skill
+        if self.auto_skill_manager:
+            try:
+                console.print("[dim]Analyzing query for relevant skills...[/dim]")
+                skill_result = await self.auto_skill_manager.process_query(user_input)
+
+                if skill_result:
+                    skill_name = skill_result['skill_name']
+                    skill_context = skill_result['context']
+                    skill_score = skill_result['score']
+
+                    # Show user what skill is being used
+                    console.print(f"[cyan]🎯 Using skill:[/cyan] [bold]{skill_name}[/bold] (relevance: {skill_score:.1f}/10)")
+
+                    # Add skill context to conversation history
+                    skill_msg = Message(role="system", content=skill_context)
+                    self.conversation_history.append(skill_msg)
+
+                    logger.info(f"Auto-loaded skill: {skill_name} (score: {skill_score})")
+                else:
+                    logger.debug("No relevant skill found for query")
+
+            except Exception as e:
+                logger.warning(f"Auto-skill matching failed: {e}")
+                # Continue without skill context
 
         # Tool execution loop - continue until no more tool calls
         max_iterations = 3  # Prevent infinite loops
@@ -510,13 +569,47 @@ Alpha has access to:
 
     async def _show_skills(self):
         """Show installed skills."""
-        if not self.skill_executor:
-            console.print("[yellow]Skill system not available[/yellow]")
-            return
+        # Get builtin skills from SkillRegistry
+        builtin_skills = []
+        if self.skill_executor:
+            builtin_skills = self.skill_executor.list_installed_skills()
 
-        skills = self.skill_executor.list_installed_skills()
+        # Get auto-skill system skills
+        auto_skills = []
+        if self.auto_skill_manager:
+            auto_skills = self.auto_skill_manager.list_installed_skills()
 
-        if not skills:
+        # Build output
+        skills_sections = []
+
+        # Builtin skills section
+        if builtin_skills:
+            builtin_list = "\n".join([
+                f"- **{s['name']}** (v{s['version']}) - {s['description']}\n  Category: {s['category']}, Author: {s['author']}"
+                for s in builtin_skills
+            ])
+            skills_sections.append(f"""## Builtin Skills (Python-based)
+
+{builtin_list}
+""")
+
+        # Auto-skill system skills section
+        if auto_skills:
+            auto_list = "\n".join([
+                f"- **{s['name']}** - {s['description']}"
+                for s in auto_skills
+            ])
+            skills_sections.append(f"""## Downloaded Skills (SKILL.md format, from skills.sh)
+
+Total: {len(auto_skills)} skills
+
+{auto_list}
+
+These skills are automatically loaded when relevant to your queries.
+""")
+
+        # Final output
+        if not skills_sections:
             skills_text = """
 # Installed Skills
 
@@ -526,14 +619,12 @@ Skills can be auto-discovered and installed on-demand when you use them.
 Use `search skill <query>` to find available skills.
             """
         else:
-            skills_list = "\n".join([
-                f"- **{s['name']}** (v{s['version']}) - {s['description']}\n  Category: {s['category']}, Author: {s['author']}"
-                for s in skills
-            ])
             skills_text = f"""
 # Installed Skills
 
-{skills_list}
+{"".join(skills_sections)}
+
+**Tip**: Skills are automatically selected based on your queries. You don't need to manually invoke them.
             """
 
         console.print(Markdown(skills_text))
@@ -637,8 +728,23 @@ async def run_cli():
             auto_install=skill_config.get('auto_install', True)
         )
 
+        # Create auto-skill manager
+        auto_skill_config = skill_config.get('auto_skill', {})
+        auto_skill_enabled = auto_skill_config.get('enabled', True)
+
+        auto_skill_manager = None
+        if auto_skill_enabled:
+            console.print("[blue]Initializing auto-skill system...[/blue]")
+            auto_skill_manager = AutoSkillManager(
+                auto_install=auto_skill_config.get('auto_install', True),
+                auto_load=auto_skill_config.get('auto_load', True)
+            )
+            # Initialize (load skills cache)
+            await auto_skill_manager.initialize()
+            console.print("[green]✓[/green] Auto-skill system ready")
+
         # Create and start CLI
-        cli = CLI(engine, llm_service, tool_registry, skill_executor)
+        cli = CLI(engine, llm_service, tool_registry, skill_executor, auto_skill_manager)
 
         # Start engine in background
         engine_task = asyncio.create_task(engine.run())
