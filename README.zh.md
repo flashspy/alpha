@@ -1,247 +1,289 @@
-# Alpha AI Assistant
+# Alpha AI 助手
 
 [English](README.md) | 简体中文
 
-个人超级AI助理，24小时运行帮助完成各种任务。
+一个全天候运行的个人超级AI助手,帮助您完成各种任务。
 
-## 特性
+## Alpha是什么?
 
-- 🤖 基于LLM的Agent架构
-- 🔧 可扩展的工具系统 (Shell、File、Browser、Code、HTTP、DateTime、Calculator)
-- 🧠 长期记忆与个性化
-- ⚡ 异步任务管理
-- 🔄 持续运行与自动恢复
-- 💬 多种交互界面 (CLI、API)
-- 🌐 多LLM支持 (Anthropic Claude、OpenAI GPT、DeepSeek)
-- 🔌 自定义API端点支持
+Alpha是由先进AI模型驱动的智能个人助手。它可以:
 
-## 架构
+- 💬 **自然对话** - 与您聊天并帮助处理日常任务
+- 🔧 **执行任务** - 运行shell命令、管理文件、发送HTTP请求
+- 📅 **定时任务** - 使用类似cron的方式设置自动化任务
+- 🧮 **计算转换** - 解决数学问题和单位转换
+- 🌐 **搜索网络** - 在线查找信息
+- ⏰ **处理时间** - 处理日期、时间和时区
+- 🤖 **多AI支持** - 可选择DeepSeek、Claude或GPT-4
 
-详见 [架构设计文档](docs/zh/architecture.md)。
+## 快速开始
 
-## 系统要求
-
-- Python 3.10+
-- OpenAI API密钥 或 Anthropic API密钥 或 DeepSeek API密钥
-
-## 安装
+### 1. 安装
 
 ```bash
+# 克隆仓库
+git clone https://github.com/yourusername/alpha.git
+cd alpha
+
 # 创建虚拟环境
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Windows系统: venv\Scripts\activate
 
 # 安装依赖
 pip install -r requirements.txt
 
-# 复制配置文件
-cp config.example.yaml config.yaml
-
-# 配置API密钥 (选择一种)
-
-# 方式1: 使用Anthropic Claude
-export ANTHROPIC_AUTH_TOKEN="your-api-key"  # 推荐
-# 或
-export ANTHROPIC_API_KEY="your-api-key"     # 兼容
-
-# 方式2: 使用DeepSeek (经济实惠)
-export DEEPSEEK_API_KEY="your-deepseek-api-key"
-
-# 方式3: 使用OpenAI
-export OPENAI_API_KEY="your-openai-api-key"
-
-# 可选: 自定义API端点
-export ANTHROPIC_BASE_URL="https://api.anthropic.com"
+# 创建数据目录
+mkdir -p data
 ```
 
-## 使用
+### 2. 配置API密钥
+
+选择一个AI提供商(推荐使用DeepSeek,性价比最高):
 
 ```bash
-# 启动交互式CLI
-python -m alpha.interface.cli
+# 选项1: DeepSeek (推荐 - 性价比最高)
+export DEEPSEEK_API_KEY="你的deepseek密钥"
 
-# 或使用快速启动脚本
+# 选项2: Anthropic Claude
+export ANTHROPIC_API_KEY="你的anthropic密钥"
+
+# 选项3: OpenAI GPT
+export OPENAI_API_KEY="你的openai密钥"
+```
+
+**获取API密钥:**
+- DeepSeek: https://platform.deepseek.com/api_keys
+- Anthropic: https://console.anthropic.com/
+- OpenAI: https://platform.openai.com/api-keys
+
+### 3. 启动Alpha
+
+```bash
+# 快速启动
 ./start.sh
 
-# 执行特定任务
-python -m alpha.main --task "总结AI相关新闻"
-
-# 后台运行
-python -m alpha.main --daemon
+# 或手动启动
+python -m alpha.interface.cli
 ```
 
-## 示例交互
+## 使用示例
+
+### 基本对话
 
 ```
-You> 列出当前目录的文件
+You> 北京今天天气怎么样?
+Alpha> 我来帮您查询北京今天的天气。
+[显示天气信息]
 
-Alpha> TOOL: shell
-PARAMS: {"command": "ls -la"}
+You> 计算2500的15%是多少
+Alpha> 结果是: 375.0
 
-执行工具: shell
-工具成功: total 48
-drwxr-xr-x 10 user staff  320 Jan 29 12:00 .
-...
-
-You> 退出
+You> 这个目录里有什么文件?
+Alpha> [列出当前目录的所有文件]
 ```
 
-## 可用命令
+### 可用命令
 
-- `help` - 显示帮助信息
-- `status` - 显示系统状态
-- `clear` - 清空对话历史
-- `quit` 或 `exit` - 退出Alpha
+与Alpha对话时,可以使用这些命令:
 
-## 开发
+- `help` - 显示可用命令
+- `status` - 查看Alpha的系统状态
+- `clear` - 清除对话历史
+- `exit` 或 `quit` - 退出Alpha
 
-```bash
-# 安装开发依赖
-pip install -r requirements-dev.txt
+## AI提供商对比
 
-# 运行测试
-pytest
+Alpha支持三种AI提供商。根据您的需求选择:
 
-# 代码格式化
-black alpha/
-isort alpha/
+| 特性 | DeepSeek | Claude | GPT-4 |
+|------|----------|--------|-------|
+| **成本** | 🏆 最优 | 良好 | 昂贵 |
+| **速度** | 非常快 | 快 | 中等 |
+| **中文支持** | 优秀 | 良好 | 一般 |
+| **代码生成** | 非常好 | 优秀 | 非常好 |
+| **推理能力** | 优秀 | 优秀 | 非常好 |
+| **最适合** | 日常使用,成本敏感 | 复杂任务,编程 | 通用任务 |
+
+### 价格对比
+
+每百万tokens成本:
+
+| 提供商 | 输入 | 输出 | **总计** |
+|--------|------|------|----------|
+| **DeepSeek** | $0.14 | $0.28 | **$0.42** 🏆 |
+| Claude Sonnet | $3.00 | $15.00 | $18.00 |
+| GPT-4 | $5.00 | $15.00 | $20.00 |
+
+💡 **DeepSeek可为您节省40-50倍的API成本!**
+
+### 切换提供商
+
+编辑 `config.yaml`:
+
+```yaml
+llm:
+  default_provider: "deepseek"  # 改为: anthropic, openai, 或 deepseek
 ```
 
-## 项目结构
+## 可用工具
+
+Alpha内置强大的工具:
+
+| 工具 | 功能 | 使用示例 |
+|------|------|----------|
+| **Shell** | 执行终端命令 | `ls`, `git status`, `npm install` |
+| **File** | 读写管理文件 | 创建、编辑、删除文件 |
+| **HTTP** | 发送网络请求 | 调用API、下载内容 |
+| **Search** | 搜索网络 | 在线查找信息 |
+| **DateTime** | 处理日期时间 | 转换时区、计算时长 |
+| **Calculator** | 数学和单位转换 | `sqrt(144)`, 10公里转英里 |
+
+## 定时任务
+
+让Alpha自动执行任务:
 
 ```
-alpha/
-├── core/           # 核心运行引擎
-├── llm/            # LLM集成
-├── tools/          # 工具系统
-├── memory/         # 记忆系统
-├── tasks/          # 任务管理
-├── events/         # 事件系统
-├── interface/      # 用户界面
-└── utils/          # 工具函数
+You> 安排一个任务,每天早上9点检查我的邮件
+Alpha> 我会为您设置定时任务...
+[创建cron计划: 0 9 * * *]
 ```
 
-## 文档
+调度格式:
+- **Cron表达式**: `0 9 * * *` (每天早上9点)
+- **间隔**: 每30分钟、每2小时
+- **一次性**: 指定的日期和时间
 
-### 中文文档
-- [快速开始](docs/zh/quickstart.md) - 5分钟上手
-- [功能详解](docs/zh/features.md) - 完整功能说明
-- [需求文档](docs/zh/requirements.md) - 需求定义
-- [架构设计](docs/zh/architecture.md) - 系统架构
-- [Anthropic配置](docs/zh/anthropic_config.md) - Anthropic配置指南
-- [DeepSeek集成指南](docs/DEEPSEEK_GUIDE.md) - DeepSeek API使用说明
-- [API配置](docs/API_SETUP.md) - 多provider配置和故障排查
-- [Phase 1报告](docs/zh/phase1_report.md) - 第一阶段开发报告
-- [项目总结](docs/zh/project_summary.md) - 项目总结
+## 版本发布记录
 
-### English Documentation
-- [Quick Start](docs/en/quickstart.md) - Get started in 5 minutes
-- [Features](docs/en/features.md) - Complete feature guide
-- [Requirements](docs/en/requirements.md) - Requirements definition
-- [Architecture](docs/en/architecture.md) - System architecture
-- [Anthropic Config](docs/en/anthropic_config.md) - Anthropic configuration guide
-- [Phase 1 Report](docs/en/phase1_report.md) - Phase 1 development report
-- [Project Summary](docs/en/project_summary.md) - Project summary
+### v0.2.0 (当前版本) - 任务调度与增强工具
+**发布日期**: 2026-01-29
 
-### 项目文档
-- [变更日志 / Changelog](CHANGELOG.md)
-- [版本说明 / Release Notes](RELEASE_NOTES.md)
-- [下一步计划 / Next Steps](NEXT_STEPS.md)
-- [完成报告 / Completion Report](PROJECT_COMPLETE.md)
-- [更新总结 / Update Summary](UPDATE_SUMMARY.md)
+**新功能:**
+- ✨ **任务调度器** - 支持cron表达式、间隔或一次性任务调度
+- ✨ **HTTP工具** - 支持完整HTTP方法的API请求(GET, POST, PUT, DELETE)
+- ✨ **日期时间工具** - 高级日期时间操作和时区支持
+- ✨ **计算器工具** - 安全的数学计算和单位转换(长度、重量、温度、数据)
+- 🔍 **增强搜索** - 通过DuckDuckGo API进行真实网络搜索
+- 🎨 **更简洁界面** - 工具执行细节从聊天中隐藏(只显示结果)
 
-## 状态
+**改进:**
+- 支持多格式参数(JSON和YAML)
+- 更好的错误处理和超时机制
+- 改进的API配置和回退支持
 
-✅ **Phase 1 Enhanced - Tools Expansion** (已完成)
+### v0.1.1 - 多提供商支持
+**发布日期**: 2026-01-29
 
-- [x] 需求定义
-- [x] 架构设计
-- [x] 核心引擎实现
-- [x] LLM集成 (OpenAI, Anthropic, DeepSeek)
-- [x] 基础工具 (Shell, File, Search)
-- [x] 实用工具 (HTTP, DateTime, Calculator)
-- [x] CLI界面
-- [x] 测试套件 (32/32 通过)
-- [x] 完整文档
+**新功能:**
+- ✨ **DeepSeek集成** - 性价比最高的AI提供商(便宜40-50倍)
+- ✨ **多提供商系统** - 在DeepSeek、Claude和GPT-4之间轻松切换
+- 🔧 **自定义API端点** - 支持自建或代理API
 
-## 故障排查
+**改进:**
+- 环境变量回退机制
+- 改进的配置验证
+- 更好的API错误提示
 
-### 导入错误
-确保在虚拟环境中:
+### v0.1.0 - 初始版本
+**发布日期**: 2026-01-28
+
+**核心功能:**
+- 💬 交互式CLI聊天界面
+- 🤖 AI驱动的任务执行
+- 🔧 基础工具(Shell、File、Search)
+- 🧠 对话记忆
+- ⚡ 异步任务管理
+- 📝 配置系统
+
+## 故障排除
+
+### "找不到模块"错误
+
+确保您在虚拟环境中:
+
 ```bash
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### API密钥错误
-检查环境变量是否设置:
+### "API密钥未配置"错误
+
+检查API密钥是否已设置:
+
 ```bash
-echo $ANTHROPIC_AUTH_TOKEN
+# 检查哪些密钥已设置
+echo $DEEPSEEK_API_KEY
+echo $ANTHROPIC_API_KEY
+echo $OPENAI_API_KEY
+
+# 如果为空,导出您的密钥
+export DEEPSEEK_API_KEY="您的密钥"
+```
+
+### 测试配置
+
+```bash
+# 检查API配置
+./check_api_config.sh
+
+# 测试DeepSeek连接
+python test_deepseek.py
 ```
 
 ### 数据库错误
-创建数据目录:
+
 ```bash
+# 如果缺少数据目录,创建它
 mkdir -p data
+
+# 检查权限
+ls -la data/
 ```
 
-## LLM Provider 对比
+## 文档
 
-Alpha支持多个LLM provider，您可以根据需求选择：
+### 用户指南
+- [快速开始指南](docs/manual/zh/quickstart.md) - 5分钟上手
+- [功能指南](docs/manual/zh/features.md) - 完整功能文档
+- [API设置指南](docs/API_SETUP.md) - 配置AI提供商
+- [工具使用指南](docs/TOOL_USAGE_GUIDE.md) - 如何使用各个工具
 
-| Provider | 速度 | 成本 | 中文能力 | 代码能力 | 推理能力 | 推荐场景 |
-|----------|------|------|---------|---------|---------|---------|
-| **DeepSeek** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 经济实惠、中文任务、日常使用 |
-| **Claude** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 复杂推理、代码生成、长文本 |
-| **GPT-4** | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 通用任务、英文优先 |
+### API提供商指南
+- [DeepSeek设置](docs/DEEPSEEK_GUIDE.md) - DeepSeek配置
+- [Anthropic设置](docs/manual/zh/anthropic_config.md) - Claude配置
 
-### 价格对比（每百万tokens）
+## 常见问题
 
-| Provider | 输入 | 输出 | 性价比 |
-|----------|------|------|--------|
-| DeepSeek | $0.14 | $0.28 | 🏆 最佳 |
-| Claude Sonnet | $3.00 | $15.00 | 一般 |
-| GPT-4 | $5.00 | $15.00 | 较低 |
+**Q: 应该选择哪个AI提供商?**
+A: 对于大多数用户,推荐使用DeepSeek,因为它性价比高且中文支持优秀。复杂编程任务可以使用Claude。
 
-### 快速测试
+**Q: 可以在没有网络的情况下使用Alpha吗?**
+A: Alpha需要网络连接来与AI提供商通信。部分工具(如计算器和日期时间)可以离线工作。
 
-```bash
-# 测试DeepSeek
-export DEEPSEEK_API_KEY="your-key"
-python test_deepseek.py
+**Q: 我的数据安全吗?**
+A: 所有对话都存储在本地的`data/alpha.db`中。API提供商(DeepSeek、Anthropic、OpenAI)会根据其隐私政策处理您的消息。
 
-# 测试Anthropic fallback机制
-python test_fallback.py
+**Q: 可以安排重复性任务吗?**
+A: 可以!使用cron表达式或基于间隔的调度。例如:"安排这个任务每周一上午10点运行"
 
-# 检查API配置
-./check_api_config.sh
-```
+**Q: 使用Alpha的成本是多少?**
+A: Alpha本身是免费的。您只需支付API使用费用:
+- DeepSeek: 每百万tokens约$0.42
+- Claude: 每百万tokens约$18
+- GPT-4: 每百万tokens约$20
 
-### 切换Provider
+## 获取帮助
 
-在 `config.yaml` 中修改：
-
-```yaml
-llm:
-  default_provider: "deepseek"  # 改为: anthropic, openai, deepseek
-```
-
-或在代码中动态选择：
-
-```python
-# 使用DeepSeek处理一般对话
-response = await llm_service.complete(messages, provider="deepseek")
-
-# 使用Claude处理复杂任务
-response = await llm_service.complete(messages, provider="anthropic")
-```
+- 📖 [文档](docs/)
+- 🐛 [报告问题](https://github.com/yourusername/alpha/issues)
+- 💬 [讨论区](https://github.com/yourusername/alpha/discussions)
 
 ## 许可证
 
-MIT
+MIT许可证 - 详见[LICENSE](LICENSE)文件
 
 ---
 
 **当前版本**: v0.2.0
-**状态**: Production Ready - Enhanced Tools
-**质量评级**: ⭐⭐⭐⭐⭐
+**状态**: 生产就绪
+**默认AI提供商**: DeepSeek(性价比最高)

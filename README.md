@@ -4,30 +4,27 @@ English | [简体中文](README.zh.md)
 
 A personal super AI assistant that runs 24/7 to help you accomplish various tasks.
 
-## Features
+## What is Alpha?
 
-- 🤖 LLM-based Agent Architecture
-- 🔧 Extensible Tool System (Shell, File, Browser, Code, HTTP, DateTime, Calculator)
-- 🧠 Long-term Memory & Personalization
-- ⚡ Asynchronous Task Management
-- 🔄 Continuous Running & Auto Recovery
-- 💬 Multiple Interfaces (CLI, API)
-- 🌐 Multi-LLM Support (Anthropic Claude, OpenAI GPT, DeepSeek)
-- 🔌 Custom API Endpoint Support
-- 📅 Advanced Task Scheduler with Cron Support
+Alpha is your intelligent personal assistant powered by advanced AI models. It can:
 
-## Architecture
+- 💬 **Chat naturally** - Have conversations and get help with daily tasks
+- 🔧 **Execute tasks** - Run shell commands, manage files, make HTTP requests
+- 📅 **Schedule tasks** - Set up automated tasks with cron-like scheduling
+- 🧮 **Calculate & convert** - Solve math problems and convert units
+- 🌐 **Search the web** - Find information online
+- ⏰ **Handle dates/times** - Work with dates, times, and timezones
+- 🤖 **Multi-AI support** - Choose from DeepSeek, Claude, or GPT-4
 
-See [Architecture Design](docs/en/architecture.md) for details.
+## Quick Start
 
-## System Requirements
-
-- Python 3.10+
-- At least one API key: Anthropic, OpenAI, or DeepSeek
-
-## Installation
+### 1. Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/alpha.git
+cd alpha
+
 # Create virtual environment
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -35,293 +32,263 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy configuration file
-cp config.example.yaml config.yaml
+# Create data directory
+mkdir -p data
+```
 
-# Configure API key (choose one)
+### 2. Configure API Key
 
-# Option 1: Use Anthropic Claude
-export ANTHROPIC_AUTH_TOKEN="your-api-key"
-# or
-export ANTHROPIC_API_KEY="your-api-key"
+Choose one AI provider (DeepSeek is recommended for cost-effectiveness):
 
-# Option 2: Use DeepSeek (Most Cost-Effective)
+```bash
+# Option 1: DeepSeek (Recommended - Most cost-effective)
 export DEEPSEEK_API_KEY="your-deepseek-api-key"
 
-# Option 3: Use OpenAI
-export OPENAI_API_KEY="your-openai-api-key"
+# Option 2: Anthropic Claude
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
 
-# Optional: Custom API endpoint
-export ANTHROPIC_BASE_URL="https://api.anthropic.com"
+# Option 3: OpenAI GPT
+export OPENAI_API_KEY="your-openai-api-key"
 ```
 
-## Usage
+**Get API Keys:**
+- DeepSeek: https://platform.deepseek.com/api_keys
+- Anthropic: https://console.anthropic.com/
+- OpenAI: https://platform.openai.com/api-keys
+
+### 3. Start Alpha
 
 ```bash
-# Start interactive CLI
-python -m alpha.interface.cli
-
-# Or use quick start script
+# Quick start
 ./start.sh
 
-# Execute specific task
-python -m alpha.main --task "Summarize AI news"
-
-# Run in background
-python -m alpha.main --daemon
+# Or manually
+python -m alpha.interface.cli
 ```
 
-## Example Interaction
+## Usage Examples
+
+### Basic Conversation
 
 ```
-You> List files in current directory
+You> What's the weather in Beijing?
+Alpha> I'll search for the current weather in Beijing for you.
+[Shows weather information]
 
-Alpha> I'll list the files in your current directory.
+You> Calculate 15% of 2500
+Alpha> The result is: 375.0
 
-[Files listed here...]
-
-You> exit
+You> What files are in this directory?
+Alpha> [Lists all files in current directory]
 ```
 
-## Available Commands
+### Available Commands
 
-- `help` - Show help message
-- `status` - Show system status
+While chatting with Alpha, you can use these commands:
+
+- `help` - Show available commands
+- `status` - Check Alpha's system status
 - `clear` - Clear conversation history
-- `quit` or `exit` - Exit Alpha
+- `exit` or `quit` - Exit Alpha
 
-## LLM Provider Comparison
+## AI Provider Comparison
 
-Alpha supports multiple LLM providers. Choose based on your needs:
+Alpha supports three AI providers. Choose based on your needs:
 
-| Provider | Speed | Cost | Chinese | Coding | Reasoning | Best For |
-|----------|-------|------|---------|--------|-----------|----------|
-| **DeepSeek** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Cost-effective, Chinese, Daily use |
-| **Claude** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Complex reasoning, Code generation |
-| **GPT-4** | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | General tasks, English-first |
+| Feature | DeepSeek | Claude | GPT-4 |
+|---------|----------|--------|-------|
+| **Cost** | 🏆 Best | Good | Expensive |
+| **Speed** | Very Fast | Fast | Medium |
+| **Chinese Support** | Excellent | Good | Fair |
+| **Code Generation** | Very Good | Excellent | Very Good |
+| **Reasoning** | Excellent | Excellent | Very Good |
+| **Best For** | Daily use, cost-sensitive | Complex tasks, coding | General tasks |
 
-### Pricing Comparison (per million tokens)
+### Pricing Comparison
 
-| Provider | Input | Output | Value |
-|----------|-------|--------|-------|
-| DeepSeek | $0.14 | $0.28 | 🏆 Best |
-| Claude Sonnet | $3.00 | $15.00 | Fair |
-| GPT-4 | $5.00 | $15.00 | Lower |
+Cost per 1 million tokens:
 
-### Quick Testing
+| Provider | Input | Output | **Total** |
+|----------|-------|--------|-----------|
+| **DeepSeek** | $0.14 | $0.28 | **$0.42** 🏆 |
+| Claude Sonnet | $3.00 | $15.00 | $18.00 |
+| GPT-4 | $5.00 | $15.00 | $20.00 |
 
-```bash
-# Test DeepSeek
-export DEEPSEEK_API_KEY="your-key"
-python test_deepseek.py
-
-# Test Anthropic fallback mechanism
-python test_fallback.py
-
-# Check API configuration
-./check_api_config.sh
-```
+💡 **DeepSeek saves you 40-50x on API costs!**
 
 ### Switching Providers
 
-In `config.yaml`:
+Edit `config.yaml`:
 
 ```yaml
 llm:
-  default_provider: "deepseek"  # Change to: anthropic, openai, deepseek
+  default_provider: "deepseek"  # Change to: anthropic, openai, or deepseek
 ```
 
-Or dynamically in code:
+## Available Tools
 
-```python
-# Use DeepSeek for general chat
-response = await llm_service.complete(messages, provider="deepseek")
+Alpha comes with powerful built-in tools:
 
-# Use Claude for complex tasks
-response = await llm_service.complete(messages, provider="anthropic")
-```
+| Tool | What it does | Example Use |
+|------|-------------|-------------|
+| **Shell** | Execute terminal commands | `ls`, `git status`, `npm install` |
+| **File** | Read/write/manage files | Create, edit, delete files |
+| **HTTP** | Make web requests | Call APIs, download content |
+| **Search** | Search the web | Find information online |
+| **DateTime** | Handle dates/times | Convert timezones, calculate durations |
+| **Calculator** | Math & unit conversion | `sqrt(144)`, convert 10km to miles |
 
-## Available DeepSeek Models
+## Task Scheduling
 
-1. **deepseek-chat** - General conversation model
-   - Best for daily conversations and general tasks
-   - Most cost-effective
-
-2. **deepseek-reasoner** (DeepSeek-R1)
-   - Advanced reasoning capabilities
-   - Best for complex analysis and math problems
-
-3. **deepseek-coder**
-   - Specialized for code generation
-   - Best for programming tasks
-
-## Development
-
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run tests
-pytest
-
-# Code formatting
-black alpha/
-isort alpha/
-```
-
-## Project Structure
+Schedule Alpha to run tasks automatically:
 
 ```
-alpha/
-├── core/           # Core runtime engine
-├── llm/            # LLM integration
-├── tools/          # Tool system
-├── memory/         # Memory system
-├── tasks/          # Task management
-├── scheduler/      # Task scheduler with cron support
-├── events/         # Event system
-├── interface/      # User interfaces
-└── utils/          # Utility functions
+You> Schedule a task to check my email every morning at 9am
+Alpha> I'll set up a scheduled task for you...
+[Creates cron schedule: 0 9 * * *]
 ```
 
-## Documentation
+Scheduling formats:
+- **Cron**: `0 9 * * *` (every day at 9am)
+- **Interval**: Every 30 minutes, every 2 hours
+- **One-time**: At specific date and time
 
-### English Documentation
-- [Quick Start](docs/en/quickstart.md) - Get started in 5 minutes
-- [Features](docs/en/features.md) - Complete feature guide
-- [Requirements](docs/en/requirements.md) - Requirements definition
-- [Architecture](docs/en/architecture.md) - System architecture
-- [Anthropic Config](docs/en/anthropic_config.md) - Anthropic configuration
-- [DeepSeek Guide](docs/DEEPSEEK_GUIDE.md) - DeepSeek API integration
-- [API Setup](docs/API_SETUP.md) - Multi-provider setup and troubleshooting
-- [Phase 1 Report](docs/en/phase1_report.md) - Phase 1 development report
-- [Project Summary](docs/en/project_summary.md) - Project summary
+## Release Notes
 
-### 中文文档
-- [快速开始](docs/zh/quickstart.md) - 5分钟上手
-- [功能详解](docs/zh/features.md) - 完整功能说明
-- [需求文档](docs/zh/requirements.md) - 需求定义
-- [架构设计](docs/zh/architecture.md) - 系统架构
-- [Anthropic配置](docs/zh/anthropic_config.md) - Anthropic配置指南
-- [DeepSeek集成](docs/DEEPSEEK_GUIDE.md) - DeepSeek API使用说明
-- [API配置](docs/API_SETUP.md) - 多provider配置和故障排查
-- [Phase 1报告](docs/zh/phase1_report.md) - 第一阶段开发报告
-- [项目总结](docs/zh/project_summary.md) - 项目总结
+### v0.2.0 (Current) - Task Scheduling & Enhanced Tools
+**Release Date**: 2026-01-29
 
-### Project Documents
-- [Changelog](CHANGELOG.md)
-- [Release Notes](RELEASE_NOTES.md)
-- [Next Steps](NEXT_STEPS.md)
-- [Completion Report](PROJECT_COMPLETE.md)
-- [Update Summary](UPDATE_SUMMARY.md)
+**New Features:**
+- ✨ **Task Scheduler** - Schedule tasks with cron expressions, intervals, or one-time execution
+- ✨ **HTTP Tool** - Make API requests with full HTTP methods support (GET, POST, PUT, DELETE)
+- ✨ **DateTime Tool** - Advanced date/time operations with timezone support
+- ✨ **Calculator Tool** - Safe math evaluation with unit conversions (length, weight, temperature, data)
+- 🔍 **Enhanced Search** - Real web search via DuckDuckGo API
+- 🎨 **Cleaner Interface** - Tool execution details hidden from chat (shows only results)
 
-## Status
+**Improvements:**
+- Multi-format parameter support (JSON and YAML)
+- Better error handling and timeouts
+- Improved API configuration with fallback support
 
-✅ **Phase 1 Enhanced - Tools Expansion** (Completed)
+### v0.1.1 - Multi-Provider Support
+**Release Date**: 2026-01-29
 
-- [x] Requirements definition
-- [x] Architecture design
-- [x] Core engine implementation
-- [x] LLM integration (OpenAI, Anthropic, DeepSeek)
-- [x] Basic tools (Shell, File, Search)
-- [x] Utility tools (HTTP, DateTime, Calculator)
-- [x] CLI interface
-- [x] Test suite (61 tests, 100% passing)
-- [x] Complete documentation
+**New Features:**
+- ✨ **DeepSeek Integration** - Most cost-effective AI provider (40-50x cheaper)
+- ✨ **Multi-Provider System** - Easy switching between DeepSeek, Claude, and GPT-4
+- 🔧 **Custom API Endpoints** - Support for self-hosted or proxy APIs
 
-🟡 **Phase 2 - Autonomous Operation** (50% Complete)
+**Improvements:**
+- Environment variable fallback mechanism
+- Improved configuration validation
+- Better API error messages
 
-- [x] Task scheduler with cron support
-- [x] Multi-provider LLM support with fallback
-- [x] DeepSeek integration
-- [ ] Vector database (ChromaDB)
-- [ ] Self-monitoring and log analysis
+### v0.1.0 - Initial Release
+**Release Date**: 2026-01-28
+
+**Core Features:**
+- 💬 Interactive CLI chat interface
+- 🤖 AI-powered task execution
+- 🔧 Basic tools (Shell, File, Search)
+- 🧠 Conversation memory
+- ⚡ Async task management
+- 📝 Configuration system
 
 ## Troubleshooting
 
-### Import Errors
-Ensure you're in the virtual environment:
+### "Module not found" errors
+
+Make sure you're in the virtual environment:
+
 ```bash
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### API Key Errors
-Check if environment variables are set:
+### "API key not configured" errors
+
+Check if your API key is set:
+
 ```bash
+# Check which keys are set
 echo $DEEPSEEK_API_KEY
 echo $ANTHROPIC_API_KEY
+echo $OPENAI_API_KEY
+
+# If empty, export your key
+export DEEPSEEK_API_KEY="your-key-here"
 ```
 
-### Database Errors
-Create data directory:
-```bash
-mkdir -p data
-```
+### Test your configuration
 
-### DeepSeek Setup
-1. Visit [DeepSeek Platform](https://platform.deepseek.com/api_keys)
-2. Create API key
-3. Set environment variable: `export DEEPSEEK_API_KEY="your-key"`
-4. Test: `python test_deepseek.py`
-
-### API Configuration
-Run the configuration checker:
 ```bash
+# Check API configuration
 ./check_api_config.sh
+
+# Test DeepSeek connection
+python test_deepseek.py
 ```
 
-For detailed troubleshooting, see [API Setup Guide](docs/API_SETUP.md).
+### Database errors
 
-## Why DeepSeek?
+```bash
+# Create data directory if missing
+mkdir -p data
 
-DeepSeek is now the **default provider** for Alpha due to:
-
-- 💰 **Most Cost-Effective**: 20x cheaper than Claude, 30x cheaper than GPT-4
-- 🇨🇳 **Excellent Chinese Support**: Best-in-class Chinese understanding
-- 🧠 **Strong Reasoning**: DeepSeek-R1 rivals top models in reasoning tasks
-- 🚀 **Fast Response**: Quick inference with streaming support
-- 🔓 **Open Source**: Transparent model architecture
-
-### Cost Comparison Example
-
-For 1 million tokens of conversation:
-- DeepSeek: **$0.28** (output) + $0.14 (input) = **$0.42**
-- Claude: **$15** (output) + $3 (input) = **$18**
-- GPT-4: **$15** (output) + $5 (input) = **$20**
-
-**DeepSeek saves you 40-50x on API costs!**
-
-## Multi-Provider Strategy
-
-You can use different providers for different tasks:
-
-```python
-# Use DeepSeek for daily chat (cost-effective)
-await llm_service.complete(messages, provider="deepseek")
-
-# Use Claude for complex code generation (high quality)
-await llm_service.complete(messages, provider="anthropic")
-
-# Use DeepSeek Reasoner for math/logic problems
-await llm_service.complete(messages, provider="deepseek", model="deepseek-reasoner")
-
-# Use DeepSeek Coder for programming tasks
-await llm_service.complete(messages, provider="deepseek", model="deepseek-coder")
+# Check permissions
+ls -la data/
 ```
 
-## Contributing
+## Documentation
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### User Guides
+- [Quick Start Guide](docs/manual/en/quickstart.md) - Get started in 5 minutes
+- [Features Guide](docs/manual/en/features.md) - Complete feature documentation
+- [API Setup Guide](docs/API_SETUP.md) - Configure AI providers
+- [Tool Usage Guide](docs/TOOL_USAGE_GUIDE.md) - How to use each tool
+
+### API Provider Guides
+- [DeepSeek Setup](docs/DEEPSEEK_GUIDE.md) - DeepSeek configuration
+- [Anthropic Setup](docs/manual/en/anthropic_config.md) - Claude configuration
+
+### 中文文档
+- [快速开始](docs/manual/zh/quickstart.md)
+- [功能说明](docs/manual/zh/features.md)
+- [API配置](docs/API_SETUP.md)
+
+## Frequently Asked Questions
+
+**Q: Which AI provider should I choose?**
+A: For most users, DeepSeek is recommended due to its excellent cost-effectiveness and Chinese language support. Use Claude for complex coding tasks.
+
+**Q: Can I use Alpha without an internet connection?**
+A: Alpha requires an internet connection to communicate with AI providers. Some tools (like Calculator and DateTime) work offline.
+
+**Q: Is my data private?**
+A: All conversations are stored locally in `data/alpha.db`. API providers (DeepSeek, Anthropic, OpenAI) process your messages according to their privacy policies.
+
+**Q: Can I schedule recurring tasks?**
+A: Yes! Use cron expressions or interval-based scheduling. Example: "Schedule this task to run every Monday at 10am"
+
+**Q: How much does it cost to use Alpha?**
+A: Alpha itself is free. You only pay for API usage:
+- DeepSeek: ~$0.42 per million tokens
+- Claude: ~$18 per million tokens
+- GPT-4: ~$20 per million tokens
+
+## Getting Help
+
+- 📖 [Documentation](docs/)
+- 🐛 [Report Issues](https://github.com/yourusername/alpha/issues)
+- 💬 [Discussions](https://github.com/yourusername/alpha/discussions)
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
 **Current Version**: v0.2.0
-**Status**: Production Ready - Task Scheduling & Enhanced Tools
-**Quality Rating**: ⭐⭐⭐⭐⭐
-**Default Provider**: DeepSeek (Most Cost-Effective)
-**Test Coverage**: 61 tests (100% passing)
+**Status**: Production Ready
+**Default AI Provider**: DeepSeek (Most Cost-Effective)
