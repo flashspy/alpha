@@ -45,7 +45,8 @@ PARAMS: {"url": "https://wttr.in/Beijing?format=j1", "method": "GET"}
 
     print(f"Tool calls parsed: {len(tool_calls1)}")
     if tool_calls1:
-        print(f"  Tool: {tool_calls1[0]['tool']}")
+        print(f"  Type: {tool_calls1[0]['type']}")
+        print(f"  Name: {tool_calls1[0]['name']}")
         print(f"  Params: {tool_calls1[0]['params']}")
     print(f"User message: {repr(user_msg1)}")
     print()
@@ -67,7 +68,8 @@ PARAMS:
 
     print(f"Tool calls parsed: {len(tool_calls2)}")
     if tool_calls2:
-        print(f"  Tool: {tool_calls2[0]['tool']}")
+        print(f"  Type: {tool_calls2[0]['type']}")
+        print(f"  Name: {tool_calls2[0]['name']}")
         print(f"  Params: {tool_calls2[0]['params']}")
     print(f"User message: {repr(user_msg2)}")
     print()
@@ -92,7 +94,8 @@ PARAMS:
 
     print(f"Tool calls parsed: {len(tool_calls3)}")
     for i, call in enumerate(tool_calls3, 1):
-        print(f"  Tool {i}: {call['tool']}")
+        print(f"  Tool {i} Type: {call['type']}")
+        print(f"  Tool {i} Name: {call['name']}")
         print(f"  Params {i}: {call['params']}")
     print(f"User message: {repr(user_msg3)}")
     print()
@@ -116,7 +119,8 @@ PARAMS:
 
     print(f"Tool calls parsed: {len(tool_calls4)}")
     if tool_calls4:
-        print(f"  Tool: {tool_calls4[0]['tool']}")
+        print(f"  Type: {tool_calls4[0]['type']}")
+        print(f"  Name: {tool_calls4[0]['name']}")
         print(f"  Params: {tool_calls4[0]['params']}")
     print(f"User message: {repr(user_msg4)}")
     print()

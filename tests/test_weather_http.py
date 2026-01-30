@@ -33,7 +33,7 @@ async def test_weather_api():
 
     if result.success:
         print("✓ Request succeeded")
-        data = result.output.get("json", {})
+        data = result.output.get("json", {}) if result.output else {}
         if data:
             current = data.get("current_condition", [{}])[0]
             print(f"  Temperature: {current.get('temp_C')}°C")
@@ -46,8 +46,12 @@ async def test_weather_api():
             if weather_desc:
                 print(f"  Condition: {weather_desc[0].get('value', 'N/A')}")
         else:
-            print(f"  Status Code: {result.output.get('status_code')}")
-            print(f"  Response length: {len(result.output.get('body', ''))}")
+            if result.output:
+                print(f"  Status Code: {result.output.get('status_code')}")
+                body = result.output.get('body', '')
+                print(f"  Response length: {len(body) if body else 0}")
+            else:
+                print("  No output data available")
     else:
         print(f"✗ Request failed: {result.error}")
 

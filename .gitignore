@@ -34,3 +34,13 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# Claude Code
+.claude/
+
+# Agent Skills (downloaded dependencies)
+.agents/
+
+# Test files
+test_custom_client.py
+test_reports/

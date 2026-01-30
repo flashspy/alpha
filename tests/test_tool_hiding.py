@@ -110,7 +110,8 @@ PARAMS:
     print(f"Number of tools detected: {len(tool_calls)}")
     if tool_calls:
         for i, call in enumerate(tool_calls, 1):
-            print(f"  Tool {i}: {call['tool']}")
+            print(f"  Tool {i} Type: {call['type']}")
+            print(f"  Tool {i} Name: {call['name']}")
             print(f"  Params {i}: {call['params']}")
     print()
 
