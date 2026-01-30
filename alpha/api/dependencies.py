@@ -1,0 +1,66 @@
+"""
+API Dependencies
+
+Provides dependency injection functions for FastAPI routes.
+"""
+
+import time
+import psutil
+from typing import Optional
+from alpha.core.engine import AlphaEngine
+
+# Global state
+_engine: Optional[AlphaEngine] = None
+_start_time: float = time.time()
+
+
+def set_engine(engine: AlphaEngine) -> None:
+    """
+    Set the global engine instance.
+
+    Args:
+        engine: AlphaEngine instance
+    """
+    global _engine, _start_time
+    _engine = engine
+    _start_time = time.time()
+
+
+def get_engine() -> AlphaEngine:
+    """
+    Get the global engine instance.
+
+    Returns:
+        AlphaEngine instance
+
+    Raises:
+        RuntimeError: If engine not initialized
+    """
+    if _engine is None:
+        raise RuntimeError("Alpha engine not initialized")
+    return _engine
+
+
+def get_uptime() -> float:
+    """
+    Get server uptime in seconds.
+
+    Returns:
+        Uptime in seconds
+    """
+    return time.time() - _start_time
+
+
+def get_system_stats() -> dict:
+    """
+    Get system resource statistics.
+
+    Returns:
+        Dictionary with CPU and memory stats
+    """
+    process = psutil.Process()
+    return {
+        "cpu_percent": process.cpu_percent(),
+        "memory_mb": process.memory_info().rss / 1024 / 1024,
+        "threads": process.num_threads()
+    }

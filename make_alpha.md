@@ -112,7 +112,14 @@ Review all project documents (requirements, technical solutions, progress report
 - Pending requirements aligned with Alpha's core positioning
 
 ### 2. Verify & Optimize Existing Features
-Conduct end-to-end testing of developed features across normal, boundary, and abnormal scenarios. Fix any vulnerabilities or bugs before proceeding.
+**Default Strategy**: Run smoke tests to quickly validate core functionality
+**Full Testing**: Only execute comprehensive end-to-end testing when:
+- Significant refactoring or architectural changes
+- Before major version releases
+- Critical bug fixes affecting core features
+- Integration of new major dependencies
+
+Fix any vulnerabilities or bugs identified before proceeding.
 
 ### 3. Complete In-Development Features
 Advance partial implementations to completion. Refine details, improve logic, and conduct comprehensive testing until features meet launch standards.
@@ -143,7 +150,9 @@ Maximize efficiency through concurrent development:
 ### Code Quality
 
 - **Language**: All source code, comments, variables, and docstrings in English only
-- **Testing**: Design CLI-interactive testing framework with comprehensive test cases covering normal, abnormal, and boundary scenarios
+- **Testing**: Design CLI-interactive testing framework with layered test strategy:
+  - **Smoke Tests (Default)**: Quick validation of critical paths and core functionality (run on every change)
+  - **Comprehensive Tests (Selective)**: Full coverage including normal, abnormal, and boundary scenarios (triggered by: major refactoring, version releases, critical fixes, integration changes)
 - **Security**: Never record account information (keys, passwords) in files, logs, or code; use configured environment variables only
 - **Version Control**: Commit after each task completion with standardized messages (e.g., "Fix XX vulnerability", "Implement XX feature"); follow branch management rules
 - **Dependencies**: Integrate all third-party packages into project installation/deployment scripts with auto-install, version locking, and exception handling
@@ -171,7 +180,15 @@ Implement industry-standard benchmarking to evaluate Alpha's competitive perform
 
 **Execution**: Automated benchmark runner with parallel execution, detailed logging, structured output (JSON/YAML), comprehensive reports including performance trends, cost analysis, and improvement recommendations
 
-**Integration**: Run after major changes, track performance across versions, establish regression alerts
+**Testing Strategy**:
+- **Quick Smoke Benchmarks (Default)**: Run subset of critical benchmarks (1-2 tasks per complexity level) on every significant change for rapid feedback
+- **Full Benchmark Suite**: Execute complete benchmark set only when:
+  - Major feature additions or architectural changes
+  - Pre-release validation for new versions
+  - Performance optimization initiatives
+  - Monthly comprehensive assessments
+
+**Integration**: Track performance across versions, establish regression alerts, maintain historical trend analysis
 
 ## Documentation Standards
 
@@ -181,7 +198,7 @@ Maintain comprehensive documentation for project maintainability and user access
 
 - **Global Requirement List**: Track all requirements with ID, description, priority, status, expected/actual completion dates (update in real-time)
 - **Requirement Specifications**: Detailed docs for each requirement covering specifications, goals, design rationale (aligned with Alpha's positioning), technical challenges, solutions, and optimization directions
-- **Test Reports**: Document test environment, cases, process, results, identified issues, and fix status for each requirement
+- **Test Reports**: Document test environment, strategy (smoke vs. comprehensive), cases, process, results, identified issues, and fix status for each requirement
 
 ### User Documentation (docs/manual/)
 

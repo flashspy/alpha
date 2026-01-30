@@ -14,7 +14,7 @@ from ..schemas import (
     TaskStatus,
     ErrorResponse
 )
-from ..server import get_engine
+from ..dependencies import get_engine
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime
 
 from ..schemas import StatusResponse
-from ..server import get_engine, get_uptime, get_system_stats
+from ..dependencies import get_engine, get_uptime, get_system_stats
 
 logger = logging.getLogger(__name__)
 

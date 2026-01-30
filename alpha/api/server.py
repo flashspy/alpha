@@ -7,36 +7,36 @@ FastAPI-based HTTP API for Alpha daemon interaction.
 import logging
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Optional
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
-import psutil
-import time
 
 from .routes import tasks, status, health
 from .schemas import ErrorResponse
+from .dependencies import set_engine
 from ..core.engine import AlphaEngine
+from ..utils.config import load_config
 
 logger = logging.getLogger(__name__)
-
-# Global engine instance
-_engine: Optional[AlphaEngine] = None
-_start_time: float = time.time()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown"""
-    global _engine, _start_time
 
     logger.info("Starting Alpha API Server...")
 
+    # Load configuration from project root
+    project_root = Path(__file__).parent.parent.parent
+    config_path = project_root / "config.yaml"
+    config = load_config(str(config_path))
+
     # Initialize Alpha engine
-    _engine = AlphaEngine()
-    await _engine.initialize()
-    _start_time = time.time()
+    engine = AlphaEngine(config)
+    await engine.startup()
+    set_engine(engine)
 
     logger.info("Alpha API Server started successfully")
 
@@ -44,8 +44,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down Alpha API Server...")
-    if _engine:
-        await _engine.shutdown()
+    await engine.shutdown()
     logger.info("Alpha API Server shut down")
 
 
@@ -103,46 +102,6 @@ def create_app() -> FastAPI:
         }
 
     return app
-
-
-def get_engine() -> AlphaEngine:
-    """
-    Get global Alpha engine instance.
-
-    Returns:
-        AlphaEngine instance
-
-    Raises:
-        RuntimeError: If engine not initialized
-    """
-    if _engine is None:
-        raise RuntimeError("Alpha engine not initialized")
-    return _engine
-
-
-def get_uptime() -> float:
-    """
-    Get server uptime in seconds.
-
-    Returns:
-        Uptime in seconds
-    """
-    return time.time() - _start_time
-
-
-def get_system_stats() -> dict:
-    """
-    Get system resource statistics.
-
-    Returns:
-        Dictionary with CPU and memory stats
-    """
-    process = psutil.Process()
-    return {
-        "cpu_percent": process.cpu_percent(),
-        "memory_mb": process.memory_info().rss / 1024 / 1024,
-        "threads": process.num_threads()
-    }
 
 
 async def start_server(

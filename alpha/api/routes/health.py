@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from datetime import datetime
 
 from ..schemas import HealthResponse
-from ..server import get_engine
+from ..dependencies import get_engine
 
 logger = logging.getLogger(__name__)
 
