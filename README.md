@@ -129,6 +129,36 @@ llm:
   default_provider: "deepseek"  # Change to: anthropic, openai, or deepseek
 ```
 
+## Daemon Mode - Run 24/7
+
+Run Alpha as a background service on Linux:
+
+```bash
+# Install as systemd service
+sudo ./scripts/install_daemon.sh
+
+# Start the service
+sudo systemctl start alpha
+
+# Enable auto-start on boot
+sudo systemctl enable alpha
+
+# Check status
+sudo systemctl status alpha
+
+# View logs
+sudo journalctl -u alpha -f
+```
+
+**Features:**
+- 24/7 background operation
+- Automatic restart on failure
+- Start on system boot
+- Graceful shutdown
+- Configuration reload without restart
+
+See [Daemon Mode Guide](docs/manual/en/daemon_mode.md) for complete setup instructions.
+
 ## Available Tools
 
 Alpha comes with powerful built-in tools:
@@ -159,7 +189,32 @@ Scheduling formats:
 
 ## Release Notes
 
-### v0.4.0 (Current) - Intelligent Multi-Model Selection
+### v0.5.0 (Current) - Daemon Mode & 24/7 Operation
+**Release Date**: 2026-01-30
+
+**New Features:**
+- 🌙 **Daemon Mode** - Run Alpha as a 24/7 background service
+  - Systemd integration for Linux systems
+  - Automatic startup on system boot
+  - Auto-restart on failure (with configurable retry policy)
+  - Graceful shutdown handling (SIGTERM)
+  - Configuration reload without restart (SIGHUP)
+- 🔧 **Service Management** - Complete systemd service lifecycle
+  - Install/uninstall scripts
+  - PID file management
+  - Signal handling (SIGTERM, SIGHUP, SIGINT)
+  - Background process detachment
+- 📊 **Production Ready** - Suitable for server deployment
+  - Non-root user execution
+  - Resource limits configuration
+  - Security hardening options
+  - Comprehensive logging to systemd journal
+
+**Documentation:**
+- [Daemon Mode Guide](docs/manual/en/daemon_mode.md)
+- [Systemd Configuration](systemd/README.md)
+
+### v0.4.0 - Intelligent Multi-Model Selection
 **Release Date**: 2026-01-29
 
 **New Features:**
@@ -365,6 +420,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Current Version**: v0.4.0
-**Status**: Production Ready
+**Current Version**: v0.5.0
+**Status**: Production Ready ✅
+**Daemon Mode**: Available (Linux/systemd)
 **Default AI Provider**: DeepSeek (Most Cost-Effective)

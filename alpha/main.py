@@ -1,47 +1,150 @@
 """Alpha AI Assistant - Main Entry Point"""
 
 import asyncio
+import argparse
 import logging
 import sys
 from pathlib import Path
 
 from alpha.core.engine import AlphaEngine
 from alpha.utils.config import load_config
+from alpha.daemon import PIDManager, SignalHandler, daemonize
 
 
-def setup_logging():
-    """Setup logging configuration."""
+def setup_logging(daemon_mode: bool = False):
+    """
+    Setup logging configuration.
+
+    Args:
+        daemon_mode: If True, only log to file (no console output)
+    """
+    Path('logs').mkdir(exist_ok=True)
+
+    handlers = []
+
+    if not daemon_mode:
+        # Interactive mode - log to console and file
+        handlers.append(logging.StreamHandler(sys.stdout))
+
+    # Always log to file
+    handlers.append(logging.FileHandler('logs/alpha.log'))
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler('logs/alpha.log')
-        ]
+        handlers=handlers
     )
+
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Alpha AI Assistant - Personal Super AI Assistant'
+    )
+
+    parser.add_argument(
+        '--daemon',
+        action='store_true',
+        help='Run as daemon process in background'
+    )
+
+    parser.add_argument(
+        '--pid-file',
+        type=str,
+        default='/var/run/alpha/alpha.pid',
+        help='PID file location (default: /var/run/alpha/alpha.pid)'
+    )
+
+    parser.add_argument(
+        '--config',
+        type=str,
+        default='config.yaml',
+        help='Configuration file path (default: config.yaml)'
+    )
+
+    return parser.parse_args()
 
 
 async def main():
     """Main entry point."""
+    # Parse arguments
+    args = parse_args()
+
     # Setup logging
-    Path('logs').mkdir(exist_ok=True)
-    setup_logging()
+    setup_logging(daemon_mode=args.daemon)
     logger = logging.getLogger(__name__)
+
+    # Daemonize if requested
+    if args.daemon:
+        logger.info("Starting Alpha in daemon mode...")
+
+        # Daemonize the process
+        daemonize(
+            working_directory=str(Path.cwd()),
+            stdin='/dev/null',
+            stdout='logs/alpha.stdout.log',
+            stderr='logs/alpha.stderr.log'
+        )
+
+        # Re-setup logging after daemonizing (file handles may have changed)
+        setup_logging(daemon_mode=True)
+        logger = logging.getLogger(__name__)
 
     logger.info("=" * 60)
     logger.info("Alpha AI Assistant Starting...")
+    if args.daemon:
+        logger.info("Running in daemon mode")
     logger.info("=" * 60)
 
+    # Setup PID file and signal handlers for daemon mode
+    pid_manager = None
+    signal_handler = None
+    engine = None
+
     try:
+        # Create PID file if in daemon mode
+        if args.daemon:
+            pid_manager = PIDManager(args.pid_file)
+            if not pid_manager.write():
+                logger.error("Failed to create PID file - daemon may already be running")
+                sys.exit(1)
+            logger.info(f"PID file created: {args.pid_file}")
+
         # Load configuration
-        config = load_config('config.yaml')
+        config = load_config(args.config)
         logger.info(f"Loaded configuration: {config.name} v{config.version}")
 
         # Create and start engine
         engine = AlphaEngine(config)
+
+        # Setup signal handlers
+        signal_handler = SignalHandler()
+
+        async def shutdown():
+            """Shutdown handler."""
+            logger.info("Shutting down Alpha...")
+            if engine:
+                await engine.shutdown()
+
+        async def reload_config():
+            """Reload configuration handler."""
+            logger.info("Reloading configuration...")
+            try:
+                new_config = load_config(args.config)
+                logger.info("Configuration reloaded successfully")
+                # Note: Full config reload may require engine restart
+            except Exception as e:
+                logger.error(f"Failed to reload configuration: {e}")
+
+        signal_handler.setup(
+            shutdown_callback=shutdown,
+            reload_callback=reload_config
+        )
+
         await engine.startup()
 
         # Run main loop
+        logger.info("Alpha is ready")
         await engine.run()
 
     except KeyboardInterrupt:
@@ -49,6 +152,18 @@ async def main():
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
         sys.exit(1)
+    finally:
+        # Cleanup
+        if engine:
+            try:
+                await engine.shutdown()
+            except Exception as e:
+                logger.error(f"Error during shutdown: {e}")
+
+        if pid_manager:
+            pid_manager.remove()
+
+        logger.info("Alpha stopped")
 
 
 if __name__ == "__main__":

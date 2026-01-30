@@ -1,0 +1,46 @@
+[Unit]
+Description=Alpha AI Assistant - Personal Super AI Assistant
+Documentation=https://github.com/yourusername/alpha
+After=network.target
+
+[Service]
+Type=simple
+User=alpha
+Group=alpha
+WorkingDirectory=/opt/alpha
+Environment="PATH=/opt/alpha/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=/opt/alpha"
+
+# Main service command
+ExecStart=/opt/alpha/venv/bin/python -m alpha.main --daemon
+
+# Reload configuration without restart
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Graceful shutdown
+ExecStop=/bin/kill -TERM $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+StartLimitInterval=60s
+StartLimitBurst=3
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alpha
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
