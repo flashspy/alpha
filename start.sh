@@ -33,11 +33,12 @@ echo -e "${YELLOW}Activating virtual environment...${NC}"
 source venv/bin/activate
 echo -e "${GREEN}✓ Virtual environment activated${NC}"
 
-# Check if dependencies are installed
-if ! python -c "import yaml" 2>/dev/null; then
+# Check if dependencies are installed (check multiple core packages)
+if ! python -c "import yaml, aiohttp, rich, fastapi" 2>/dev/null; then
     echo -e "${YELLOW}Installing dependencies...${NC}"
-    pip install -q -r requirements.txt
+    pip install --timeout=300 --retries=5 -r requirements.txt
     echo -e "${GREEN}✓ Dependencies installed${NC}"
+    echo
 fi
 
 echo

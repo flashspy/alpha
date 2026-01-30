@@ -27,6 +27,10 @@ from alpha.skills.executor import SkillExecutor
 from alpha.skills import preinstall_builtin_skills
 from alpha.skills.auto_manager import AutoSkillManager
 
+# Initialize logger and console early
+logger = logging.getLogger(__name__)
+console = Console()
+
 # Vector Memory imports (optional - graceful fallback if unavailable)
 try:
     from alpha.vector_memory import (
@@ -40,9 +44,6 @@ try:
 except ImportError as e:
     logger.warning(f"Vector Memory not available: {e}")
     VECTOR_MEMORY_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
-console = Console()
 
 
 class CLI:
@@ -855,8 +856,8 @@ async def run_cli():
         # Create LLM service
         llm_service = LLMService.from_config(config.llm)
 
-        # Create tool registry
-        tool_registry = create_default_registry()
+        # Create tool registry (includes CodeExecutionTool if enabled)
+        tool_registry = create_default_registry(llm_service, config)
 
         # Create skill system
         skill_config = config.dict().get('skills', {}) if hasattr(config, 'dict') else {}

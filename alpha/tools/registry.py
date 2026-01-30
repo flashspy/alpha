@@ -968,16 +968,45 @@ class ToolRegistry:
             )
 
 
-def create_default_registry() -> ToolRegistry:
-    """Create registry with default tools."""
+def create_default_registry(llm_service=None, config=None) -> ToolRegistry:
+    """
+    Create registry with default tools.
+
+    Args:
+        llm_service: Optional LLM service for CodeExecutionTool
+        config: Optional config dict for CodeExecutionTool settings
+
+    Returns:
+        ToolRegistry with default tools registered
+    """
     registry = ToolRegistry()
 
-    # Register default tools
+    # Register default tools (no dependencies)
     registry.register(ShellTool())
     registry.register(FileTool())
     registry.register(SearchTool())
     registry.register(HTTPTool())
     registry.register(DateTimeTool())
     registry.register(CalculatorTool())
+
+    # Register CodeExecutionTool if dependencies are available
+    if llm_service is not None:
+        try:
+            from alpha.tools.code_tool import CodeExecutionTool
+
+            # Check if code_execution is enabled in config
+            config_dict = config.dict() if hasattr(config, 'dict') else (config or {})
+            code_exec_config = config_dict.get('code_execution', {})
+
+            # Default to enabled if not specified
+            is_enabled = code_exec_config.get('enabled', True)
+
+            if is_enabled:
+                code_tool = CodeExecutionTool(llm_service, config_dict)
+                registry.register(code_tool)
+                logger.info("CodeExecutionTool registered successfully")
+        except Exception as e:
+            logger.warning(f"Failed to register CodeExecutionTool: {e}")
+            # Continue without code execution tool - non-critical
 
     return registry

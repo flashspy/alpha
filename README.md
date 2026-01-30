@@ -190,7 +190,74 @@ Scheduling formats:
 
 ## Release Notes
 
-### v0.6.0 (Current) - Never Give Up Resilience System
+### v0.7.0 (Current) - Code Generation & Safe Execution
+**Release Date**: 2026-01-30
+
+**New Features:**
+- 🔧 **Code Generation Engine** - LLM-powered code generation for Python, JavaScript, Bash
+  - Context-aware code generation from task descriptions
+  - Automatic test generation with pytest/jest/bats templates
+  - Iterative code refinement based on execution feedback
+  - Multi-format response parsing (JSON, markdown, raw)
+  - Language-specific templates and best practices
+- 🛡️ **Safe Execution Sandbox** - Docker-based isolated execution environment
+  - Container isolation with read-only root filesystem
+  - Resource limits: CPU 50%, Memory 256MB, Time 30s default
+  - Network isolation (disabled by default, configurable)
+  - Automatic container cleanup and resource management
+  - Graceful degradation when Docker unavailable
+- ✅ **Code Validation System** - Multi-stage validation pipeline
+  - Syntax validation using AST parsing (Python) and pattern matching (JavaScript, Bash)
+  - Security scanning for dangerous operations (eval, exec, file deletion, network access)
+  - Risk level assessment (low, medium, high)
+  - Code quality scoring with metrics (complexity, documentation, error handling)
+  - Language-specific security recommendations
+- ⚡ **Code Execution Tool** - Integrated with Alpha's tool system
+  - Seamless LLM agent integration as standard tool
+  - Task-based generation or direct code execution
+  - User approval workflow with code preview
+  - Intelligent retry logic with automatic refinement
+  - Comprehensive statistics and execution tracking
+- 🎯 **Multi-Language Support** - Full support for 3 languages
+  - Python 3.12+ (with ast-based validation)
+  - JavaScript/Node.js 20+ (with pattern-based validation)
+  - Bash 5.2+ (with construct validation)
+  - Language-specific execution configurations
+  - Dependency detection and management
+
+**Architecture:**
+- 5 core components: CodeGenerator, CodeValidator, SandboxManager, CodeExecutor, CodeExecutionTool
+- 3,859 lines of production-ready code
+- 86 comprehensive tests (100% pass rate)
+- 18,300 lines of documentation (English + Chinese)
+- Event-driven architecture for loose coupling
+- Configuration-driven behavior
+
+**Security:**
+- 8-layer security model (input validation, code scanning, sandboxing, resource limits, network isolation, user approval, audit logging, emergency stop)
+- Malicious code detection (eval, exec, subprocess, file deletion, network access)
+- Container isolation with seccomp profiles
+- Read-only root filesystem with writable /tmp
+- Resource limits strictly enforced
+- User approval required by default
+- Comprehensive audit logging
+
+**Production Benefits:**
+- **Autonomous Capability**: Generate and execute custom code when existing tools insufficient
+- **Safe by Default**: Multi-layer security prevents malicious code execution
+- **User Control**: Approval workflow ensures transparency
+- **Intelligent**: Automatic refinement on failures, retry with improvements
+- **Observable**: Detailed execution logs and statistics
+- **Flexible**: Supports Python, JavaScript, Bash with extensible architecture
+
+**Documentation:**
+- [Code Execution Guide (EN)](docs/manual/en/code_execution.md)
+- [Code Execution Guide (中文)](docs/manual/zh/code_execution.md)
+- [Architecture Documentation](docs/internal/code_execution_architecture.md)
+- [API Reference](docs/internal/code_execution_api.md)
+- [Test Report](docs/internal/code_execution_test_report.md)
+
+### v0.6.0 - Never Give Up Resilience System
 **Release Date**: 2026-01-30
 
 **New Features:**
@@ -466,8 +533,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Current Version**: v0.6.0
+**Current Version**: v0.7.0
 **Status**: Production Ready ✅
-**Latest Feature**: Never Give Up Resilience System (Automatic Failure Recovery & Self-Healing)
+**Latest Feature**: Code Generation & Safe Execution (Autonomous Code Generation for Python/JavaScript/Bash)
 **Daemon Mode**: Available (Linux/systemd)
 **Default AI Provider**: DeepSeek (Most Cost-Effective)

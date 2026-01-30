@@ -1,0 +1,10 @@
+# Optional Vector Memory dependencies
+# Install only if you need semantic search and vector storage features
+# Usage: pip install -r requirements-vector.txt
+
+# Vector Database
+chromadb>=0.4.22
+
+# Embedding providers (choose one or more based on your needs)
+sentence-transformers>=2.3.0  # For local embeddings (no API key needed)
+voyageai>=0.2.0  # For Anthropic/Voyage AI embeddings
