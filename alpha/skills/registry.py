@@ -27,7 +27,8 @@ class SkillRegistry:
 
     def __init__(self, skills_dir: Optional[Path] = None):
         self.skills: Dict[str, AgentSkill] = {}
-        self.skills_dir = skills_dir or Path.home() / ".alpha" / "skills"
+        # Use project-local skills directory for portability
+        self.skills_dir = skills_dir or Path(".agents/skills")
         self.skills_dir.mkdir(parents=True, exist_ok=True)
 
     async def register(self, skill: AgentSkill, initialize: bool = True) -> bool:
