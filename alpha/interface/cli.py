@@ -227,6 +227,15 @@ IMPORTANT INSTRUCTIONS:
                     await self._search_skills(query)
                     continue
 
+                # Proactive intelligence commands
+                if user_input.lower().startswith('proactive '):
+                    await self._handle_proactive_command(user_input[10:].strip())
+                    continue
+
+                if user_input.lower() == 'preferences':
+                    await self._show_preferences()
+                    continue
+
                 # Process user message
                 await self._process_message(user_input)
 
@@ -724,6 +733,11 @@ IMPORTANT INSTRUCTIONS:
 - **status**: Show system status
 - **skills**: List installed skills
 - **search skill <query>**: Search for available skills
+- **proactive status**: Show proactive intelligence statistics
+- **proactive suggestions**: View pending proactive suggestions
+- **proactive history**: View past proactive executions
+- **proactive enable/disable**: Toggle proactive features
+- **preferences**: View and manage learned preferences
 - **clear**: Clear conversation history
 - **quit/exit**: Exit Alpha
 
@@ -733,6 +747,7 @@ Just type your question or request, and Alpha will help you.
 Alpha has access to:
 - **Tools**: Built-in capabilities (shell, file, search, http, datetime, calculator)
 - **Skills**: Dynamic capabilities that can be auto-discovered and installed on-demand
+- **Proactive Intelligence**: Alpha learns from your behavior and proactively suggests tasks
         """
         console.print(Markdown(help_text))
 
@@ -836,15 +851,254 @@ These skills can be automatically installed when you use them.
         """Show system status."""
         health = await self.engine.health_check()
 
+        # Build status text with proactive intelligence if available
+        status_parts = [
+            f"- **Status**: {health['status']}",
+            f"- **Uptime**: {health['uptime']}",
+            f"- **Tasks**: {health['tasks']}",
+            f"- **Memory**: {health['memory']}"
+        ]
+
+        # Add proactive intelligence status if available
+        if hasattr(self.engine, 'pattern_learner') and 'proactive' in health:
+            proactive_info = health['proactive']
+            status_parts.extend([
+                "",
+                "**Proactive Intelligence**:",
+                f"- Patterns Learned: {proactive_info.get('patterns_count', 0)}",
+                f"- Active Suggestions: {proactive_info.get('suggestions_count', 0)}",
+                f"- Status: {proactive_info.get('status', 'inactive')}"
+            ])
+
         status_text = f"""
 # System Status
 
-- **Status**: {health['status']}
-- **Uptime**: {health['uptime']}
-- **Tasks**: {health['tasks']}
-- **Memory**: {health['memory']}
+{chr(10).join(status_parts)}
         """
         console.print(Markdown(status_text))
+
+    async def _handle_proactive_command(self, subcommand: str):
+        """Handle proactive intelligence commands."""
+        # Check if proactive system is available
+        if not hasattr(self.engine, 'pattern_learner'):
+            console.print("[yellow]Proactive intelligence system is not available[/yellow]")
+            return
+
+        # Parse subcommand
+        parts = subcommand.split(maxsplit=1)
+        cmd = parts[0].lower() if parts else ""
+
+        if cmd == "status":
+            await self._show_proactive_status()
+        elif cmd == "suggestions":
+            await self._show_proactive_suggestions()
+        elif cmd == "history":
+            await self._show_proactive_history()
+        elif cmd == "enable":
+            await self._toggle_proactive(True)
+        elif cmd == "disable":
+            await self._toggle_proactive(False)
+        else:
+            console.print(f"[yellow]Unknown proactive command: {subcommand}[/yellow]")
+            console.print("Available commands: status, suggestions, history, enable, disable")
+
+    async def _show_proactive_status(self):
+        """Show proactive intelligence statistics."""
+        try:
+            # Get pattern statistics
+            patterns = await self.engine.pattern_learner.get_patterns(min_confidence=0.0)
+
+            # Get recent user requests for activity stats
+            conn = await self.engine.pattern_learner._get_connection()
+            cursor = await conn.execute("""
+                SELECT COUNT(*) as total,
+                       COUNT(CASE WHEN timestamp > datetime('now', '-7 days') THEN 1 END) as last_week,
+                       COUNT(CASE WHEN timestamp > datetime('now', '-1 day') THEN 1 END) as last_day
+                FROM user_requests
+            """)
+            row = await cursor.fetchone()
+            await conn.close()
+
+            total_requests = row[0] if row else 0
+            week_requests = row[1] if row else 0
+            day_requests = row[2] if row else 0
+
+            # Format output
+            status_text = f"""
+# Proactive Intelligence Status
+
+**Learning Statistics**:
+- Total Patterns Learned: {len(patterns)}
+- High Confidence Patterns (≥0.8): {sum(1 for p in patterns if p['confidence'] >= 0.8)}
+- Medium Confidence Patterns (0.6-0.8): {sum(1 for p in patterns if 0.6 <= p['confidence'] < 0.8)}
+
+**Activity**:
+- Total Interactions: {total_requests}
+- Last 7 Days: {week_requests}
+- Last 24 Hours: {day_requests}
+
+**Configuration**:
+- Status: {'Enabled' if self.config.proactive.enabled else 'Disabled'}
+- Auto-Execution: {'Enabled' if self.config.proactive.auto_execute else 'Disabled'}
+- Confidence Threshold: {self.config.proactive.confidence_threshold}
+
+Use `proactive suggestions` to see pending suggestions.
+            """
+            console.print(Markdown(status_text))
+
+        except Exception as e:
+            console.print(f"[bold red]Error getting proactive status:[/bold red] {e}")
+            logger.error(f"Proactive status error: {e}", exc_info=True)
+
+    async def _show_proactive_suggestions(self):
+        """Show pending proactive suggestions."""
+        try:
+            # Detect current task opportunities
+            suggestions = await self.engine.task_detector.detect_tasks(
+                current_context={"time": "now"},
+                max_suggestions=10
+            )
+
+            if not suggestions:
+                console.print("[yellow]No proactive suggestions at this time.[/yellow]")
+                console.print("[dim]Alpha will learn from your interactions and suggest tasks when appropriate.[/dim]")
+                return
+
+            # Format suggestions
+            suggestions_list = []
+            for i, sug in enumerate(suggestions, 1):
+                confidence_bar = "█" * int(sug.confidence * 10)
+                suggestions_list.append(
+                    f"{i}. **{sug.task_description}**\n"
+                    f"   - Confidence: {confidence_bar} {sug.confidence:.1%}\n"
+                    f"   - Reason: {sug.justification}\n"
+                    f"   - Safe to auto-execute: {'Yes' if sug.is_safe else 'No'}"
+                )
+
+            suggestions_text = f"""
+# Proactive Suggestions
+
+{chr(10).join(suggestions_list)}
+
+To execute a suggestion, just tell Alpha what you want to do.
+            """
+            console.print(Markdown(suggestions_text))
+
+        except Exception as e:
+            console.print(f"[bold red]Error getting suggestions:[/bold red] {e}")
+            logger.error(f"Proactive suggestions error: {e}", exc_info=True)
+
+    async def _show_proactive_history(self):
+        """Show past proactive executions."""
+        try:
+            # Get execution history from memory
+            conn = await self.engine.pattern_learner._get_connection()
+            cursor = await conn.execute("""
+                SELECT timestamp, description, metadata
+                FROM user_requests
+                WHERE request_type = 'proactive_execution'
+                ORDER BY timestamp DESC
+                LIMIT 20
+            """)
+            rows = await cursor.fetchall()
+            await conn.close()
+
+            if not rows:
+                console.print("[yellow]No proactive execution history yet.[/yellow]")
+                return
+
+            # Format history
+            history_items = []
+            for row in rows:
+                timestamp, description, metadata = row
+                # Parse metadata if it's JSON string
+                import json
+                try:
+                    meta = json.loads(metadata) if metadata else {}
+                except:
+                    meta = {}
+
+                result = meta.get('result', 'unknown')
+                confidence = meta.get('confidence', 0)
+
+                history_items.append(
+                    f"- **{timestamp}**: {description}\n"
+                    f"  Result: {result}, Confidence: {confidence:.1%}"
+                )
+
+            history_text = f"""
+# Proactive Execution History
+
+{chr(10).join(history_items)}
+
+Showing last 20 proactive executions.
+            """
+            console.print(Markdown(history_text))
+
+        except Exception as e:
+            console.print(f"[bold red]Error getting history:[/bold red] {e}")
+            logger.error(f"Proactive history error: {e}", exc_info=True)
+
+    async def _toggle_proactive(self, enable: bool):
+        """Enable or disable proactive intelligence."""
+        try:
+            self.config.proactive.enabled = enable
+            action = "enabled" if enable else "disabled"
+
+            console.print(f"[green]Proactive intelligence {action}[/green]")
+
+            if enable:
+                console.print("[dim]Alpha will now learn from your interactions and make proactive suggestions.[/dim]")
+            else:
+                console.print("[dim]Proactive suggestions disabled. Pattern learning will continue in background.[/dim]")
+
+        except Exception as e:
+            console.print(f"[bold red]Error toggling proactive mode:[/bold red] {e}")
+            logger.error(f"Proactive toggle error: {e}", exc_info=True)
+
+    async def _show_preferences(self):
+        """Show learned user preferences."""
+        try:
+            # Get all patterns which represent learned preferences
+            patterns = await self.engine.pattern_learner.get_patterns(min_confidence=0.6)
+
+            if not patterns:
+                console.print("[yellow]No preferences learned yet.[/yellow]")
+                console.print("[dim]Alpha will learn your preferences as you interact.[/dim]")
+                return
+
+            # Group patterns by type
+            time_patterns = [p for p in patterns if 'time' in p['pattern_type']]
+            context_patterns = [p for p in patterns if 'context' in p['pattern_type']]
+            other_patterns = [p for p in patterns if p not in time_patterns and p not in context_patterns]
+
+            sections = []
+
+            if time_patterns:
+                items = [f"- {p['description']} (confidence: {p['confidence']:.1%})" for p in time_patterns[:5]]
+                sections.append(f"**Time Preferences**:\n" + "\n".join(items))
+
+            if context_patterns:
+                items = [f"- {p['description']} (confidence: {p['confidence']:.1%})" for p in context_patterns[:5]]
+                sections.append(f"**Context Preferences**:\n" + "\n".join(items))
+
+            if other_patterns:
+                items = [f"- {p['description']} (confidence: {p['confidence']:.1%})" for p in other_patterns[:5]]
+                sections.append(f"**General Patterns**:\n" + "\n".join(items))
+
+            preferences_text = f"""
+# Learned Preferences
+
+{chr(10).join(sections)}
+
+Alpha learns your preferences over time to provide better assistance.
+Showing top patterns with confidence ≥ 60%.
+            """
+            console.print(Markdown(preferences_text))
+
+        except Exception as e:
+            console.print(f"[bold red]Error getting preferences:[/bold red] {e}")
+            logger.error(f"Preferences error: {e}", exc_info=True)
 
 
 async def run_cli():
