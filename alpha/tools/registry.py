@@ -1009,4 +1009,28 @@ def create_default_registry(llm_service=None, config=None) -> ToolRegistry:
             logger.warning(f"Failed to register CodeExecutionTool: {e}")
             # Continue without code execution tool - non-critical
 
+    # Register BrowserTool (Phase 4.3 - REQ-4.5)
+    try:
+        from alpha.tools.browser_tool import BrowserTool
+
+        # Check if browser_automation is enabled in config
+        config_dict = config.dict() if hasattr(config, 'dict') else (config or {})
+        browser_config = config_dict.get('browser_automation', {})
+
+        # Default to enabled if not specified
+        is_enabled = browser_config.get('enabled', True)
+
+        if is_enabled:
+            browser_tool = BrowserTool(browser_config)
+            if browser_tool.is_available():
+                registry.register(browser_tool)
+                logger.info("BrowserTool registered successfully")
+            else:
+                logger.warning("BrowserTool not available (Playwright not installed)")
+    except ImportError:
+        logger.warning("BrowserTool not available (module not found)")
+    except Exception as e:
+        logger.warning(f"Failed to register BrowserTool: {e}")
+        # Continue without browser tool - non-critical
+
     return registry
