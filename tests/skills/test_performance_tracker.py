@@ -32,9 +32,10 @@ async def learning_store():
 
 
 @pytest.fixture
-async def tracker(learning_store):
+async def tracker(learning_store, tmp_path):
     """Create test tracker."""
-    tracker = PerformanceTracker(learning_store)
+    # Use tmp_path to ensure isolated data directory per test
+    tracker = PerformanceTracker(learning_store, data_dir=tmp_path / "skill_performance")
     yield tracker
     await tracker.cleanup()
 
@@ -294,18 +295,23 @@ async def test_performance_summary(tracker):
 
 
 @pytest.mark.asyncio
-async def test_stats_persistence(learning_store):
+async def test_stats_persistence(learning_store, tmp_path):
     """Test stats are persisted to database."""
-    tracker = PerformanceTracker(learning_store)
+    # Use tmp_path to ensure isolated data directory
+    data_dir = tmp_path / "persistence_test"
+    tracker = PerformanceTracker(learning_store, data_dir=data_dir)
 
     await tracker.record_execution("persist_skill", True, 1.0)
     await tracker.cleanup()
 
-    # Create new tracker with same store
-    tracker2 = PerformanceTracker(learning_store)
+    # Create new tracker with same store and data_dir
+    tracker2 = PerformanceTracker(learning_store, data_dir=data_dir)
 
     # Stats should be loaded
     assert "persist_skill" in tracker2.stats_cache
+
+    # Cleanup tracker2
+    await tracker2.cleanup()
 
 
 if __name__ == "__main__":

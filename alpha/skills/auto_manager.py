@@ -102,7 +102,8 @@ class AutoSkillManager:
                 'skill_source': 'local',
                 'context': context,
                 'matches': matches,  # All matches for reference
-                'score': best_match['score']
+                'score': best_match['score'],
+                'installs': best_match.get('installs', 0)  # Add installs field
             }
 
         return {
@@ -173,7 +174,7 @@ class AutoSkillManager:
             suggestions.append({
                 'name': match['name'],
                 'source': match['source'],
-                'installs': match['installs'],
+                'installs': match.get('installs', 0),  # Use default value for local skills
                 'score': match['score'],
                 'installed': is_installed
             })
