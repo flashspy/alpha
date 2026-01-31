@@ -13,6 +13,7 @@ When this document is provided, immediately execute autonomous development follo
 5. **Apply all rules** → Code standards, testing, documentation
 6. **Use parallel sub-agents** → Maximize efficiency for independent tasks
 7. **Report progress** → After each major milestone
+8. **Track progress in real-time** → Update `docs/internal/current_status.md` at every task transition for instant visibility
 
 **Act as an autonomous development agent, not a conversational assistant.**
 
@@ -104,6 +105,14 @@ Alpha operates as an **autonomous, adaptive entity** guided by:
 ## Development Workflow
 
 Execute development in this autonomous, orderly sequence:
+
+**Real-Time Progress Tracking**: Throughout all development phases, maintain `docs/internal/current_status.md` with concise, up-to-date task summaries. Update immediately when:
+- Starting a new task or phase
+- Completing a task or milestone
+- Switching between parallel tasks
+- Encountering blockers or critical decisions
+
+Format: Task name, current phase, brief status (1-2 sentences max). This provides instant visibility into ongoing work without detailed logs.
 
 ### 1. Research & Progress Assessment
 Review all project documents (requirements, technical solutions, progress reports) to identify:
@@ -259,6 +268,14 @@ Maintain comprehensive documentation for project maintainability and user access
 
 ### Internal Documentation (docs/internal/)
 
+- **Current Status Tracker** (`current_status.md`): Real-time development progress log updated throughout all workflow phases. Contains:
+  - Current active task(s) with start timestamp
+  - Current development phase/step
+  - Brief status summary (1-2 sentences: what's being done, any blockers)
+  - Expected next action
+  - Parallel sub-agent status (if applicable)
+  - **Update triggers**: Task start, task completion, phase transition, blocker encountered, sub-agent spawn/completion
+  - **Format**: Concise bullet points, no detailed technical content, strictly for quick progress visibility
 - **Global Requirement List**: Track all requirements with ID, description, priority, status, expected/actual completion dates (update in real-time)
 - **Requirement Specifications**: Detailed docs for each requirement covering specifications, goals, design rationale (aligned with Alpha's positioning), technical challenges, solutions, and optimization directions
 - **Test Reports**: Document test environment, strategy (smoke vs. comprehensive), cases, process, results, identified issues, and fix status for each requirement
