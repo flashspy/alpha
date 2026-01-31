@@ -235,8 +235,18 @@ class AlphaEngine:
         auto_execute_enabled = proactive_config.get('auto_execute', {}).get('enabled', False)
         auto_execute_threshold = proactive_config.get('auto_execute', {}).get('min_confidence', 0.9)
 
+        # Pattern learning settings
+        pattern_learning_interval = 3600  # Learn patterns every hour
+        last_pattern_learning = datetime.now()
+
         while self.running:
             try:
+                # Periodic pattern learning from conversation history (REQ-6.1.2)
+                time_since_learning = (datetime.now() - last_pattern_learning).total_seconds()
+                if time_since_learning >= pattern_learning_interval:
+                    await self._learn_patterns_from_history()
+                    last_pattern_learning = datetime.now()
+
                 # Detect task opportunities
                 context = await self._get_current_context()
                 suggestions = await self.task_detector.detect_proactive_tasks(context=context)
@@ -260,6 +270,42 @@ class AlphaEngine:
 
             # Sleep until next check
             await asyncio.sleep(check_interval)
+
+    async def _learn_patterns_from_history(self):
+        """Learn patterns from conversation history (REQ-6.1.2)."""
+        try:
+            logger.info("Learning patterns from conversation history...")
+
+            # Get recent conversation history
+            conversations = await self.memory_manager.get_conversation_history(limit=500)
+
+            if len(conversations) < 5:
+                logger.info("Not enough conversation history for pattern learning")
+                return
+
+            # Analyze and learn patterns
+            patterns = await self.pattern_learner.analyze_conversation_history(
+                conversations=conversations,
+                lookback_days=30
+            )
+
+            # Log learned patterns
+            pattern_count = sum(len(p) for p in patterns.values())
+            logger.info(f"Pattern learning complete: {pattern_count} patterns detected")
+
+            if pattern_count > 0:
+                # Store patterns summary in memory for tracking
+                await self.memory_manager.add_system_event(
+                    "pattern_learning",
+                    {
+                        "patterns_detected": pattern_count,
+                        "pattern_types": {k: len(v) for k, v in patterns.items()},
+                        "timestamp": datetime.now().isoformat()
+                    }
+                )
+
+        except Exception as e:
+            logger.error(f"Pattern learning failed: {e}", exc_info=True)
 
     async def _get_current_context(self) -> dict:
         """Get current context for proactive task detection."""
