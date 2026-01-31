@@ -19,6 +19,7 @@ Features:
 
 from alpha.core.task_decomposition.coordinator import ExecutionCoordinator
 from alpha.core.task_decomposition.decomposer import TaskDecomposer
+from alpha.core.task_decomposition.manager import TaskDecompositionManager
 from alpha.core.task_decomposition.models import (
     ComplexityLevel,
     ExecutionPhase,
@@ -40,6 +41,7 @@ __all__ = [
     "ProgressTracker",
     "ExecutionCoordinator",
     "ProgressStorage",
+    "TaskDecompositionManager",
     # Data Models
     "ComplexityLevel",
     "ExecutionStrategy",
