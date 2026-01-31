@@ -21,6 +21,7 @@ from pathlib import Path
 from enum import Enum
 import json
 
+from alpha.skills.installer import SkillInstaller
 
 logger = logging.getLogger(__name__)
 
@@ -155,19 +156,27 @@ class SkillEvolutionManager:
         self.marketplace = marketplace
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        
+
+        # Create installer for skill installation
+        self.installer = SkillInstaller(skills_dir=Path("skills"))
+
         # Metrics storage
         self.metrics: Dict[str, SkillMetrics] = {}
         self.evaluation_history: List[SkillEvaluationResult] = []
-        
+
         # Evolution tasks
         self._exploration_task: Optional[asyncio.Task] = None
         self._optimization_task: Optional[asyncio.Task] = None
         self._pruning_task: Optional[asyncio.Task] = None
-        
+
+        # Timestamps for tracking evolution cycles
+        self._last_exploration_time: Optional[datetime] = None
+        self._last_optimization_time: Optional[datetime] = None
+        self._last_pruning_time: Optional[datetime] = None
+
         # Load existing metrics
         self._load_metrics()
-        
+
         logger.info("SkillEvolutionManager initialized")
     
     async def start(self):
@@ -240,8 +249,11 @@ class SkillEvolutionManager:
     async def _explore_new_skills(self):
         """Discover and evaluate new skills from marketplace."""
         logger.info("Exploring marketplace for new skills...")
-        
+
         try:
+            # Update timestamp
+            self._last_exploration_time = datetime.now()
+
             # Search marketplace for trending/popular skills
             results = await self.marketplace.search(
                 query="",  # All skills
@@ -271,7 +283,35 @@ class SkillEvolutionManager:
                 if evaluation.recommendation == "activate":
                     logger.info(f"Auto-activating high-quality skill: {skill_id}")
                     self.metrics[skill_id].status = SkillStatus.EVALUATING
-                    # TODO: Install skill
+
+                    # Install and activate the skill
+                    try:
+                        # Download skill from marketplace
+                        skill_path = await self.marketplace.download_skill(
+                            skill_name=skill_id,
+                            target_dir=self.installer.skills_dir / skill_id
+                        )
+
+                        if skill_path:
+                            # Install the skill
+                            skill_instance = await self.installer.install(skill_path)
+
+                            if skill_instance:
+                                # Register the skill
+                                success = await self.registry.register(skill_instance, initialize=True)
+
+                                if success:
+                                    self.metrics[skill_id].status = SkillStatus.ACTIVE
+                                    logger.info(f"Successfully installed and activated skill: {skill_id}")
+                                else:
+                                    logger.warning(f"Failed to register skill: {skill_id}")
+                            else:
+                                logger.warning(f"Failed to install skill: {skill_id}")
+                        else:
+                            logger.warning(f"Failed to download skill: {skill_id}")
+
+                    except Exception as e:
+                        logger.error(f"Error installing skill {skill_id}: {e}", exc_info=True)
                 
                 new_skills_found += 1
             
@@ -356,7 +396,10 @@ class SkillEvolutionManager:
     async def _optimize_skills(self):
         """Analyze and optimize skill performance."""
         logger.info("Optimizing skill library...")
-        
+
+        # Update timestamp
+        self._last_optimization_time = datetime.now()
+
         # Identify top performers
         active_skills = {
             skill_id: metrics
@@ -408,7 +451,10 @@ class SkillEvolutionManager:
     async def _prune_skills(self):
         """Remove underperforming or unused skills."""
         logger.info("Pruning skill library...")
-        
+
+        # Update timestamp
+        self._last_pruning_time = datetime.now()
+
         pruned_count = 0
         now = datetime.now()
         
@@ -441,7 +487,14 @@ class SkillEvolutionManager:
                 logger.info(f"Pruning skill {skill_id}: {reason}")
                 metrics.status = SkillStatus.PRUNED
                 pruned_count += 1
-                # TODO: Actually uninstall/disable the skill
+
+                # Uninstall/disable the skill
+                try:
+                    # Unregister from registry
+                    await self.registry.unregister(skill_id)
+                    logger.info(f"Unregistered skill: {skill_id}")
+                except Exception as e:
+                    logger.error(f"Error unregistering skill {skill_id}: {e}", exc_info=True)
         
         logger.info(f"Pruning complete: {pruned_count} skills pruned")
         self._save_metrics()
@@ -488,18 +541,20 @@ class SkillEvolutionManager:
     
     def _get_last_exploration_time(self) -> Optional[str]:
         """Get timestamp of last exploration."""
-        if self.evaluation_history:
-            return self.evaluation_history[-1].evaluation_time.isoformat()
+        if self._last_exploration_time:
+            return self._last_exploration_time.isoformat()
         return None
-    
+
     def _get_last_optimization_time(self) -> Optional[str]:
         """Get timestamp of last optimization."""
-        # TODO: Track optimization timestamps
+        if self._last_optimization_time:
+            return self._last_optimization_time.isoformat()
         return None
-    
+
     def _get_last_pruning_time(self) -> Optional[str]:
         """Get timestamp of last pruning."""
-        # TODO: Track pruning timestamps
+        if self._last_pruning_time:
+            return self._last_pruning_time.isoformat()
         return None
     
     def _save_metrics(self):
