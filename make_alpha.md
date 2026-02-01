@@ -13,9 +13,22 @@ When this document is provided, immediately execute autonomous development follo
 5. **Apply all rules** → Code standards, testing, documentation
 6. **Use parallel sub-agents** → Maximize efficiency for independent tasks
 7. **Report progress** → After each major milestone
-8. **Track progress in real-time** → Update `docs/internal/current_status.md` at every task transition for instant visibility
+8. **Track progress in real-time** → Log development activities to `development.log` with LOCAL timestamps (not UTC) to maintain visibility
 
 **Act as an autonomous development agent, not a conversational assistant.**
+
+### 🤖 FULLY AUTONOMOUS MODE (Critical Rule)
+
+**When executed via automated tasks (cron, CI/CD, or non-interactive environments):**
+
+- ✅ **NEVER ask for user confirmation or input** - Make all decisions independently
+- ✅ **Autonomous decision-making** - Choose the most logical next step based on project status and priorities
+- ✅ **Incremental approach** - If uncertainty exists, choose the safest/most incremental path forward
+- ✅ **Document all decisions** - Log every autonomous decision in `development.log` with clear rationale
+- ✅ **Complete tasks end-to-end** - Implement, test, commit, and document without pausing
+- ✅ **Handle errors autonomously** - Auto-retry, fallback to alternatives, log failures, continue with next viable task
+- ✅ **Self-directed priority** - Follow this order: Fix broken tests → Complete in-progress features → Start highest priority pending feature
+- ✅ **Commit frequently** - Git commit after each completed sub-feature or major milestone
 
 ---
 
@@ -39,6 +52,14 @@ Alpha is a **personal super AI assistant** that transcends traditional AI tools 
 - **Proactive intelligence** - Anticipates needs and solves problems innovatively
 - **Futuristic interaction** - Seamless, intuitive collaboration without complex commands
 - **Relentless resilience** - Never gives up, automatically explores alternative solutions
+
+## Industry Benchmark
+
+**Reference Standard**: [OpenClaw](https://github.com/openclaw/openclaw) - Advanced autonomous AI agent framework representing state-of-the-art in intelligent automation.
+
+**Target**: Match and exceed OpenClaw in autonomous execution, tool integration, self-learning, and real-world task completion.
+
+**Differentiation**: Personalization depth, proactive intelligence, multi-model optimization, self-evolving skill ecosystem.
 
 ## Core Design Principles
 
@@ -106,13 +127,7 @@ Alpha operates as an **autonomous, adaptive entity** guided by:
 
 Execute development in this autonomous, orderly sequence:
 
-**Real-Time Progress Tracking**: Throughout all development phases, maintain `docs/internal/current_status.md` with concise, up-to-date task summaries. Update immediately when:
-- Starting a new task or phase
-- Completing a task or milestone
-- Switching between parallel tasks
-- Encountering blockers or critical decisions
-
-Format: Task name, current phase, brief status (1-2 sentences max). This provides instant visibility into ongoing work without detailed logs.
+**Real-Time Progress Tracking**: Append timestamped entries to `development.log` using LOCAL time (not UTC) - log task start/completion, commits, tests, blockers, decisions, and progress updates frequently during long tasks.
 
 ### 1. Research & Progress Assessment
 Review all project documents (requirements, technical solutions, progress reports) to identify:
@@ -121,44 +136,14 @@ Review all project documents (requirements, technical solutions, progress report
 - Pending requirements aligned with Alpha's core positioning
 
 ### 2. Verify & Optimize Existing Features
+
 **Layered Testing Strategy**: Execute progressive testing based on change scope:
+- **Quick Validation** - Always run smoke tests for critical paths
+- **Standard Testing** - Default level for most changes with functional and integration tests
+- **Comprehensive Testing** - Triggered by major changes, includes edge cases and security scans
+- **Full Validation** - Pre-release only with end-to-end scenarios and stress testing
 
-**Level 1 - Quick Validation (Always Execute)**:
-- Critical path smoke tests for core features
-- Basic integration checks
-- Runtime: ≤2 minutes
-
-**Level 2 - Standard Testing (Default for Most Changes)**:
-- Core feature functional tests
-- API contract validation
-- Error handling verification
-- Key integration scenarios
-- Runtime: ≤10 minutes
-
-**Level 3 - Comprehensive Testing (Trigger Conditions)**:
-- Full test suite including edge cases and boundary conditions
-- Cross-module integration tests
-- Performance benchmarks
-- Security vulnerability scans
-- Execute when:
-  - Significant refactoring or architectural changes
-  - Before major/minor version releases
-  - Critical bug fixes affecting core features
-  - Integration of new major dependencies
-  - Weekly scheduled comprehensive validation
-- Runtime: ≤30 minutes
-
-**Level 4 - Full System Validation (Pre-Release Only)**:
-- Complete end-to-end scenarios
-- Stress and load testing
-- Full benchmark suite
-- Security penetration testing
-- Cross-platform compatibility
-- Runtime: ≤2 hours
-
-**Auto-Escalation Rule**: If Level 1 or 2 tests reveal issues, automatically escalate to next level after fix.
-
-Fix any vulnerabilities or bugs identified before proceeding to next development phase.
+**Principle**: Auto-escalate to higher test levels when issues are discovered. Fix all identified vulnerabilities before proceeding.
 
 ### 3. Complete In-Development Features
 Advance partial implementations to completion. Refine details, improve logic, and conduct comprehensive testing until features meet launch standards.
@@ -170,124 +155,48 @@ Advance partial implementations to completion. Refine details, improve logic, an
 
 ### 5. Parallel Development Strategy
 
-Maximize efficiency through concurrent development:
-- **Identify parallel tasks** - Tasks with no dependencies (different features, independent tests, separate components)
-- **Spawn specialized sub-agents** - Allocate independent tasks to separate agents with clear, non-overlapping responsibilities
-- **Isolated workspaces** - Each sub-agent operates in independent workspace directory to prevent conflicts:
-  - Complete isolation of file operations within assigned workspace
-  - Copy shared dependencies at initialization (no cross-workspace references)
-  - Test within workspace; merge to main codebase only after verification
-  - Resolve merge conflicts and perform integration tests before final merge
-  - Clean up workspace after successful merge
-- **Monitor progress** - Track all sub-agents in real-time, resolve blocking issues promptly
-- **Integrate results** - Conduct cross-module compatibility testing after all sub-agents complete
+**Principle**: Maximize efficiency through concurrent development whenever possible.
 
-**Priority**: Always choose parallel execution when tasks can be decomposed independently.
+**Approach**: Identify independent tasks, spawn specialized sub-agents with isolated workspaces, monitor progress, and integrate results with cross-module testing.
+
+**Priority**: Always parallelize when tasks have no dependencies.
 
 ## Development Standards
 
 ### Code Quality
 
-- **Language**: All source code, comments, variables, and docstrings in English only
-- **Testing**: Design CLI-interactive testing framework with comprehensive layered strategy:
-  - **Level 1 - Smoke Tests**: Critical path validation (always run, ≤2min)
-  - **Level 2 - Standard Tests (Default)**: Functional + integration + error handling tests (run on every change, ≤10min)
-  - **Level 3 - Comprehensive Tests**: Full coverage including edge cases, boundary conditions, performance (triggered by major changes, weekly schedule, ≤30min)
-  - **Level 4 - Full Validation**: End-to-end scenarios + stress testing (pre-release only, ≤2hr)
-  - **Coverage Requirements**: Minimum 80% code coverage for core modules, 60% for utilities
-  - **Auto-Escalation**: Test failures trigger next level validation after fix
-  - **Regression Prevention**: All bug fixes must include corresponding test cases
-- **Security**: Never record account information (keys, passwords) in files, logs, or code; use configured environment variables only
-- **Version Control**: Commit after each task completion with standardized messages (e.g., "Fix XX vulnerability", "Implement XX feature"); follow branch management rules
-- **Dependencies**: Integrate all third-party packages into project installation/deployment scripts with auto-install, version locking, and exception handling
+- **Language**: English only for all code, comments, and documentation
+- **Testing**: Layered testing strategy (smoke → standard → comprehensive → full validation) with high coverage requirements and regression prevention
+- **Security**: Never hardcode credentials; use environment variables
+- **Version Control**: Commit after each task with clear, standardized messages
+- **Dependencies**: Auto-install scripts with version locking
 
 ### Testing Quality Assurance
 
-**Continuous Testing Principles**:
-- **Test-First Mindset**: Write tests before or alongside feature implementation
-- **Automated Execution**: Integrate tests into development workflow with pre-commit hooks
-- **Fast Feedback**: Level 1-2 tests provide results within 10 minutes for rapid iteration
-- **Failure Analysis**: Automatically log test failures with context for root cause analysis
-- **Test Maintenance**: Review and update tests quarterly to remove obsolete cases and add new scenarios
+**Principles**: Test-first mindset, automated execution, fast feedback, failure analysis, regular test maintenance.
 
-**Quality Gates**:
-- **Pre-Commit**: Level 1 tests must pass before code commit
-- **Pre-Merge**: Level 2 tests + affected module Level 3 tests must pass
-- **Pre-Release**: All Level 3 tests + critical Level 4 scenarios must pass
-- **Post-Release**: Monitor production metrics and execute regression tests weekly
+**Quality Gates**: Progressive validation at commit, merge, and release stages.
 
 ### Agent Benchmark Testing
 
-Implement industry-standard benchmarking to evaluate Alpha's competitive performance:
+**Objective**: Evaluate Alpha's competitive performance using industry-standard frameworks (e.g., GAIA methodology).
 
-**Framework Dimensions**:
-- Task completion success rates across complexity levels
-- Reasoning & planning capability (multi-step decomposition, execution planning)
-- Tool use proficiency and selection accuracy
-- Cost-performance optimization (API costs vs. quality)
-- Response latency targets (simple: ≤1s, medium: ≤10s, complex: ≤60s, expert: ≤300s)
-- Error recovery & resilience (never give up principle)
-- Multi-step task consistency
+**Dimensions**: Task completion rates, reasoning capability, tool proficiency, cost-performance, latency, error recovery, consistency.
 
-**Task Complexity Levels** (aligned with GAIA methodology):
-- **Level 1 (Simple)**: 1-2 tool uses, minimal reasoning (expected: ≥95% success)
-- **Level 2 (Medium)**: 3-5 tool uses, moderate planning (expected: ≥85% success)
-- **Level 3 (Complex)**: 6-10 tool uses, sophisticated reasoning (expected: ≥70% success)
-- **Level 4 (Expert)**: 10+ tool uses, adaptive replanning (expected: ≥50% success)
+**Complexity Levels**: Simple → Medium → Complex → Expert tasks across diverse scenarios.
 
-**Task Coverage**: File/system management, data processing, web/API interactions, information retrieval, code generation, task scheduling, skill integration, multi-model selection
-
-**Execution**: Automated benchmark runner with parallel execution, detailed logging, structured output (JSON/YAML), comprehensive reports including performance trends, cost analysis, and improvement recommendations
-
-**Testing Strategy**:
-- **Quick Benchmarks (Level 1)**: Critical benchmark subset (1-2 tasks per complexity level) for rapid feedback (≤5min)
-- **Standard Benchmarks (Level 2 - Default)**: Core benchmark suite covering all task categories (2-3 tasks per level) on every significant change (≤15min)
-- **Comprehensive Benchmarks (Level 3)**: Extended benchmark set with edge cases, triggered by:
-  - Major feature additions or architectural changes
-  - Performance optimization initiatives
-  - Weekly scheduled validation
-  - Runtime: ≤45min
-- **Full Benchmark Suite (Level 4)**: Complete benchmark coverage including:
-  - All complexity levels (5+ tasks each)
-  - Cross-model performance comparison
-  - Cost-effectiveness analysis
-  - Stress testing scenarios
-  - Execute for:
-    - Pre-release validation for new versions
-    - Monthly comprehensive assessments
-    - Major milestone completions
-  - Runtime: ≤2 hours
-
-**Performance Regression Alerts**: Auto-detect >10% degradation in success rates or >20% increase in latency/cost
-
-**Integration**: Track performance across versions, establish regression alerts, maintain historical trend analysis
+**Strategy**: Layered benchmarking from quick subsets to comprehensive suites with regression detection and historical trend analysis.
 
 ## Documentation Standards
 
-Maintain comprehensive documentation for project maintainability and user accessibility:
-
 ### Internal Documentation (docs/internal/)
-
-- **Current Status Tracker** (`current_status.md`): Real-time development progress log updated throughout all workflow phases. Contains:
-  - Current active task(s) with start timestamp
-  - Current development phase/step
-  - Brief status summary (1-2 sentences: what's being done, any blockers)
-  - Expected next action
-  - Parallel sub-agent status (if applicable)
-  - **Update triggers**: Task start, task completion, phase transition, blocker encountered, sub-agent spawn/completion
-  - **Format**: Concise bullet points, no detailed technical content, strictly for quick progress visibility
-- **Global Requirement List**: Track all requirements with ID, description, priority, status, expected/actual completion dates (update in real-time)
-- **Requirement Specifications**: Detailed docs for each requirement covering specifications, goals, design rationale (aligned with Alpha's positioning), technical challenges, solutions, and optimization directions
-- **Test Reports**: Document test environment, strategy (smoke vs. comprehensive), cases, process, results, identified issues, and fix status for each requirement
+- **Development Activity Log** (`development.log` in project root): Real-time log of tasks, milestones, commits, tests, blockers with LOCAL timestamps (not UTC)
+- **Global Requirement List**: Requirements tracking with ID, priority, status, dates
+- **Requirement Specifications**: Detailed requirement docs aligned with Alpha's positioning
+- **Test Reports**: Test strategies, results, issues, and fixes
 
 ### User Documentation (docs/manual/)
+Bilingual (EN/CN) deployment guides and feature manuals.
 
-Provide bilingual (English & Chinese) guides:
-- **Deployment & Configuration**: Environment requirements, installation steps, configuration methods, runtime precautions
-- **Feature Manual**: Complete feature list with purpose, usage methods, operation steps, and FAQs
-
-### README Specifications
-
-Focus on user-facing content:
-- **Core Content**: Concise installation and usage instructions (no technical architecture details)
-- **Version Release Log**: Track release date, version number, and user-perceivable new features (brief descriptions only)
+### README
+User-facing installation, usage instructions, and version release log.

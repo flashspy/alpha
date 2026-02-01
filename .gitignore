@@ -23,6 +23,9 @@ data/
 *.log
 logs/
 
+# Internal Development Logs
+docs/internal/archive/
+
 # Config
 config.yaml
 
