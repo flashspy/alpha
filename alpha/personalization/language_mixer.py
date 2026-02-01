@@ -132,9 +132,9 @@ class LanguageMixer:
         Returns:
             LanguageSignal or None
         """
-        # Count characters
-        chinese_chars = len(self.CHINESE_PATTERN.findall(message))
-        english_words = len(self.ENGLISH_PATTERN.findall(message))
+        # Count characters (sum all matched character lengths)
+        chinese_chars = sum(len(m) for m in self.CHINESE_PATTERN.findall(message))
+        english_words = sum(len(m) for m in self.ENGLISH_PATTERN.findall(message))
 
         # Skip very short messages
         if chinese_chars + english_words < 5:

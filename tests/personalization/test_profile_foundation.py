@@ -543,7 +543,7 @@ class TestProfileLearner:
 
     def test_extract_features_chinese(self, learner):
         """Test feature extraction for Chinese text"""
-        message = "请帮我解释一下这个Python错误"
+        message = "请帮我解释一下什么是Python错误"
 
         features = learner._extract_message_features(message)
 

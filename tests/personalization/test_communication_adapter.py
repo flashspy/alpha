@@ -217,7 +217,7 @@ class TestLanguageMixer:
         """Test mixing strategy for casual content"""
         mixer = LanguageMixer()
         strategy = mixer.get_mixing_strategy(
-            "How was your day?",
+            "你今天怎么样？How was your day?",  # Mixed language for casual topic
             topic='casual'
         )
 
@@ -308,6 +308,8 @@ class TestCommunicationAdapter:
             {'role': 'user', 'content': 'Be brief'},
             {'role': 'user', 'content': 'Short answer'},
             {'role': 'user', 'content': 'TLDR'},
+            {'role': 'user', 'content': 'Quick please'},
+            {'role': 'user', 'content': 'Keep it concise'},
         ]
 
         recommendation = adapter.get_adaptation(
@@ -328,6 +330,8 @@ class TestCommunicationAdapter:
             {'role': 'user', 'content': 'Explain in detail'},
             {'role': 'user', 'content': 'Tell me everything'},
             {'role': 'user', 'content': 'More details please'},
+            {'role': 'user', 'content': 'Give me comprehensive explanation'},
+            {'role': 'user', 'content': 'I want all the details'},
         ]
 
         recommendation = adapter.get_adaptation(

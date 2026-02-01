@@ -95,7 +95,8 @@ class TestProfileCommands:
     def test_show_history_with_data(self, storage):
         """Test showing history with data"""
         # Create profile with history
-        storage.add_preference_change(
+        from alpha.personalization.user_profile import PreferenceHistory
+        history = PreferenceHistory(
             profile_id='test_user',
             preference_type='verbosity',
             old_value='balanced',
@@ -103,6 +104,7 @@ class TestProfileCommands:
             reason='User preference',
             confidence=0.8
         )
+        storage.add_preference_history(history)
 
         commands = ProfileCommands(profile_storage=storage, profile_id='test_user')
         result = commands.show_history()

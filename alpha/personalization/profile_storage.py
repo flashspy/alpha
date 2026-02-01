@@ -39,19 +39,43 @@ class ProfileStorage:
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
+        self._conn = None  # Persistent connection for :memory: databases
         self._ensure_database_exists()
         self._create_tables()
 
     def _ensure_database_exists(self) -> None:
         """Ensure database file and directory exist"""
-        db_file = Path(self.db_path)
-        db_file.parent.mkdir(parents=True, exist_ok=True)
+        if self.db_path != ':memory:':
+            db_file = Path(self.db_path)
+            db_file.parent.mkdir(parents=True, exist_ok=True)
 
     def _get_connection(self) -> sqlite3.Connection:
-        """Get database connection with row factory"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+        """Get database connection with row factory
+
+        For :memory: databases, maintains a single persistent connection.
+        For file-based databases, creates new connections each time.
+        """
+        if self.db_path == ':memory:':
+            # Use persistent connection for in-memory database
+            if self._conn is None:
+                self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                self._conn.row_factory = sqlite3.Row
+            return self._conn
+        else:
+            # Create new connection for file-based database
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            return conn
+
+    def _close_connection(self, conn: sqlite3.Connection) -> None:
+        """
+        Close database connection if it's not a persistent :memory: connection
+
+        Args:
+            conn: Connection to close
+        """
+        if self.db_path != ':memory:':
+            conn.close()
 
     def _create_tables(self) -> None:
         """Create database tables if they don't exist"""
@@ -142,7 +166,8 @@ class ProfileStorage:
             conn.rollback()
             raise
         finally:
-            conn.close()
+            # Don't close persistent :memory: connection
+            self._close_connection(conn)
 
     # ==================== UserProfile Operations ====================
 
@@ -237,7 +262,7 @@ class ProfileStorage:
             conn.rollback()
             raise
         finally:
-            conn.close()
+            self._close_connection(conn)
 
     def load_profile(self, profile_id: str = "default") -> Optional[UserProfile]:
         """
@@ -264,7 +289,7 @@ class ProfileStorage:
             logger.error(f"Error loading profile: {e}")
             return None
         finally:
-            conn.close()
+            self._close_connection(conn)
 
     def delete_profile(self, profile_id: str = "default") -> bool:
         """
@@ -307,7 +332,7 @@ class ProfileStorage:
             conn.rollback()
             return False
         finally:
-            conn.close()
+            self._close_connection(conn)
 
     # ==================== PreferenceHistory Operations ====================
 
@@ -349,7 +374,7 @@ class ProfileStorage:
             conn.rollback()
             raise
         finally:
-            conn.close()
+            self._close_connection(conn)
 
     def get_preference_history(
         self,
@@ -391,7 +416,7 @@ class ProfileStorage:
             logger.error(f"Error getting preference history: {e}")
             return []
         finally:
-            conn.close()
+            self._close_connection(conn)
 
     # ==================== InteractionPattern Operations ====================
 
@@ -450,7 +475,7 @@ class ProfileStorage:
             conn.rollback()
             raise
         finally:
-            conn.close()
+            self._close_connection(conn)
 
     def get_interaction_patterns(
         self,
@@ -491,7 +516,7 @@ class ProfileStorage:
             logger.error(f"Error getting interaction patterns: {e}")
             return []
         finally:
-            conn.close()
+            self._close_connection(conn)
 
     def find_similar_pattern(
         self,
@@ -566,4 +591,4 @@ class ProfileStorage:
             logger.error(f"Error getting profile stats: {e}")
             return {}
         finally:
-            conn.close()
+            self._close_connection(conn)
