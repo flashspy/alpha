@@ -63,7 +63,11 @@ def cmd_stop(args):
     """Stop Alpha server."""
     print("Stopping Alpha server...")
 
-    pid_file = args.pid_file or "/var/run/alpha/alpha.pid"
+    # Default to data/alpha.pid in project root
+    if args.pid_file:
+        pid_file = args.pid_file
+    else:
+        pid_file = project_root / "data" / "alpha.pid"
 
     if not os.path.exists(pid_file):
         print("Alpha server is not running (no PID file found)")
@@ -89,7 +93,11 @@ def cmd_stop(args):
 
 def cmd_status(args):
     """Check Alpha server status."""
-    pid_file = args.pid_file or "/var/run/alpha/alpha.pid"
+    # Default to data/alpha.pid in project root
+    if args.pid_file:
+        pid_file = args.pid_file
+    else:
+        pid_file = project_root / "data" / "alpha.pid"
 
     if not os.path.exists(pid_file):
         print("Alpha server: NOT RUNNING")

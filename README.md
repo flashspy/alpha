@@ -63,23 +63,37 @@ export OPENAI_API_KEY="your-openai-api-key"
 
 ### 3. Start Alpha
 
-**NEW: Client-Server Mode (Recommended for 24/7 Operation)**
+**NEW: Client-Server Mode (Recommended for 24/7 Operation)** 🎯
 
-Alpha now supports a true client-server architecture where the server runs 24/7 and you can connect/disconnect anytime:
+Alpha now features a true client-server architecture with WebSocket support for real-time communication:
 
 ```bash
-# Add bin/alpha to your PATH
+# Start Alpha server (runs in background on port 9000)
+./scripts/start_server.sh 0.0.0.0 9000
+
+# Check server status
+python3 bin/alpha status --port 9000
+
+# Connect for chat (WebSocket client)
+./scripts/start_client.sh --server ws://localhost:9000/api/v1/ws/chat
+
+# Or use the alpha command (if installed in PATH)
 export PATH="$PATH:$(pwd)/bin"
+alpha chat --port 9000
 
-# Start Alpha server (runs in background)
-alpha start
-
-# Connect for chat (from same or different terminal)
-alpha chat
+# Stop server
+python3 bin/alpha stop
 
 # Disconnect anytime - server keeps running!
 # Reconnect later - conversation history preserved!
 ```
+
+**Architecture Features:**
+- 🌐 **WebSocket Real-time API** - Low-latency streaming responses
+- 🔄 **Persistent Server** - 24/7 background operation
+- 👥 **Multi-client Support** - Multiple clients can connect simultaneously
+- 💾 **Session Persistence** - Conversation history maintained across connections
+- 🛡️ **Process Management** - Automatic PID tracking and graceful shutdown
 
 **Traditional Interactive Mode (Stops when you close terminal)**
 
@@ -212,7 +226,60 @@ Scheduling formats:
 
 ## Release Notes
 
-### v0.10.0 (Latest) - Advanced Intelligence & Self-Evolution
+### v0.10.1 (Latest) - Client-Server Architecture & WebSocket API
+**Release Date**: 2026-02-01
+
+**New Features:**
+- 🌐 **WebSocket Real-time API** - Low-latency streaming chat via WebSocket protocol
+  - Real-time message streaming with chunked responses
+  - Multi-client connection support
+  - Session persistence across reconnections
+  - Full-duplex communication for interactive chat
+- 🔄 **Client-Server Architecture** - True background server with CLI client
+  - Server runs 24/7 in background (nohup process management)
+  - CLI client connects via WebSocket (ws://host:port/api/v1/ws/chat)
+  - Separate start_server.sh and start_client.sh scripts
+  - Graceful connection handling and automatic reconnection
+- 🛠️ **Fixed Command Consistency** - Unified PID file management
+  - Consistent PID file location: `data/alpha.pid`
+  - `alpha stop` command now correctly stops the server
+  - `alpha status` shows accurate server state
+  - Proper cleanup of stale PID files
+
+**Technical Details:**
+- FastAPI WebSocket routes with proper route registration
+- ConnectionManager for multi-client support
+- HTTP proxy bypass for localhost connections (NO_PROXY configuration)
+- ChatHandler abstraction for server-side chat logic
+- Streaming response protocol with multiple message types
+
+**Files Added/Modified:**
+- `alpha/api/chat_handler.py` - Server-side chat logic
+- `alpha/api/routes/websocket.py` - WebSocket endpoint implementation
+- `alpha/client/cli.py` - WebSocket client for interactive chat
+- `scripts/start_server.sh` - Server startup script
+- `scripts/start_client.sh` - Client startup script with proxy bypass
+- `bin/alpha` - Fixed PID file path consistency
+
+**Bug Fixes:**
+- Fixed WebSocket route registration (was incorrectly registered as GET route)
+- Fixed PID file path inconsistency between `alpha stop` and `start_server.sh`
+- Fixed HTTP proxy interference with localhost WebSocket connections
+- Fixed CLI client flush parameter error in console.print()
+
+**Usage:**
+```bash
+# Start server
+./scripts/start_server.sh 0.0.0.0 9000
+
+# Connect client
+./scripts/start_client.sh --server ws://localhost:9000/api/v1/ws/chat
+
+# Stop server
+python3 bin/alpha stop
+```
+
+### v0.10.0 - Advanced Intelligence & Self-Evolution
 **Release Date**: 2026-01-31
 
 **New Features:**
@@ -617,8 +684,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Current Version**: v0.10.0
+**Current Version**: v0.10.1
 **Status**: Production Ready ✅
-**Latest Feature**: Proactive Intelligence & Self-Evolution (Advanced AI capabilities with autonomous learning)
+**Latest Feature**: Client-Server Architecture & WebSocket API (Real-time communication with persistent background server)
 **Daemon Mode**: Available (Linux/systemd)
 **Default AI Provider**: DeepSeek (Most Cost-Effective)
