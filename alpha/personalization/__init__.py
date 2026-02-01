@@ -11,6 +11,7 @@ Provides deep personalization capabilities:
 from .user_profile import UserProfile, PreferenceHistory, InteractionPattern
 from .profile_storage import ProfileStorage
 from .profile_learner import ProfileLearner
+from .preference_inferrer import PreferenceInferrer
 
 __all__ = [
     "UserProfile",
@@ -18,4 +19,5 @@ __all__ = [
     "InteractionPattern",
     "ProfileStorage",
     "ProfileLearner",
+    "PreferenceInferrer",
 ]
