@@ -15,13 +15,30 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Detect virtual environment
+venv_python = project_root / "venv" / "bin" / "python3"
+if venv_python.exists():
+    PYTHON_CMD = str(venv_python)
+else:
+    PYTHON_CMD = sys.executable
+
 
 def cmd_start(args):
     """Start Alpha server."""
     print("Starting Alpha server...")
 
+    # Check if virtual environment exists
+    if not Path(PYTHON_CMD).exists():
+        print("Error: Virtual environment not found!", file=sys.stderr)
+        print("Please create it first:", file=sys.stderr)
+        print(f"  cd {project_root}", file=sys.stderr)
+        print("  python3 -m venv venv", file=sys.stderr)
+        print("  source venv/bin/activate", file=sys.stderr)
+        print("  pip install -r requirements.txt", file=sys.stderr)
+        sys.exit(1)
+
     cmd = [
-        sys.executable, "-m", "alpha.main",
+        PYTHON_CMD, "-m", "alpha.main",
         "--daemon",
         "--api-host", args.host,
         "--api-port", str(args.port)

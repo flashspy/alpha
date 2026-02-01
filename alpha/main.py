@@ -52,8 +52,8 @@ def parse_args():
     parser.add_argument(
         '--pid-file',
         type=str,
-        default='/var/run/alpha/alpha.pid',
-        help='PID file location (default: /var/run/alpha/alpha.pid)'
+        default='data/alpha.pid',  # Changed to project directory
+        help='PID file location (default: data/alpha.pid)'
     )
 
     parser.add_argument(
@@ -129,49 +129,15 @@ async def main():
         config = load_config(args.config)
         logger.info(f"Loaded configuration: {config.name} v{config.version}")
 
-        # Setup signal handlers
-        signal_handler = SignalHandler()
-
-        shutdown_event = asyncio.Event()
-
-        async def shutdown():
-            """Shutdown handler."""
-            logger.info("Shutting down Alpha...")
-            shutdown_event.set()
-
-        async def reload_config():
-            """Reload configuration handler."""
-            logger.info("Reloading configuration...")
-            try:
-                new_config = load_config(args.config)
-                logger.info("Configuration reloaded successfully")
-            except Exception as e:
-                logger.error(f"Failed to reload configuration: {e}")
-
-        signal_handler.setup(
-            shutdown_callback=shutdown,
-            reload_callback=reload_config
-        )
-
         # Run API server (includes engine initialization)
         logger.info(f"Starting API server on {args.api_host}:{args.api_port}")
-        server_task = asyncio.create_task(
-            start_server(
-                host=args.api_host,
-                port=args.api_port,
-                reload=False
-            )
+
+        # Start server directly with uvicorn run
+        await start_server(
+            host=args.api_host,
+            port=args.api_port,
+            reload=False
         )
-
-        # Wait for shutdown signal
-        await shutdown_event.wait()
-
-        # Cancel server
-        server_task.cancel()
-        try:
-            await server_task
-        except asyncio.CancelledError:
-            logger.info("Server stopped")
 
     except KeyboardInterrupt:
         logger.info("Received interrupt signal")
