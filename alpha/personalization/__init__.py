@@ -15,6 +15,7 @@ from .preference_inferrer import PreferenceInferrer
 from .communication_adapter import CommunicationAdapter, AdaptationRecommendation
 from .verbosity_detector import VerbosityDetector, VerbositySignal
 from .language_mixer import LanguageMixer, LanguageSignal, LanguageAdaptivePrompt
+from .suggestion_engine import SuggestionEngine, Suggestion
 
 __all__ = [
     "UserProfile",
@@ -30,4 +31,6 @@ __all__ = [
     "LanguageMixer",
     "LanguageSignal",
     "LanguageAdaptivePrompt",
+    "SuggestionEngine",
+    "Suggestion",
 ]
