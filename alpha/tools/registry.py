@@ -1033,4 +1033,33 @@ def create_default_registry(llm_service=None, config=None) -> ToolRegistry:
         logger.warning(f"Failed to register BrowserTool: {e}")
         # Continue without browser tool - non-critical
 
+    # Register ImageAnalysisTool (Phase 9.1 - REQ-9.1.3)
+    try:
+        from alpha.tools.image_tool import ImageAnalysisTool
+        import os
+
+        # Check if multimodal is enabled in config
+        config_dict = config.dict() if hasattr(config, 'dict') else (config or {})
+        multimodal_config = config_dict.get('multimodal', {})
+
+        # Default to enabled if not specified
+        is_enabled = multimodal_config.get('enabled', True)
+
+        # Check for Anthropic API key (required for vision)
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+
+        if is_enabled and api_key:
+            # Use model from config or default to claude-3-5-sonnet
+            model = multimodal_config.get('vision_model', 'claude-3-5-sonnet-20241022')
+            image_tool = ImageAnalysisTool(api_key=api_key, model=model)
+            registry.register(image_tool)
+            logger.info("ImageAnalysisTool registered successfully")
+        elif is_enabled and not api_key:
+            logger.warning("ImageAnalysisTool not available (ANTHROPIC_API_KEY not set)")
+    except ImportError:
+        logger.warning("ImageAnalysisTool not available (module not found)")
+    except Exception as e:
+        logger.warning(f"Failed to register ImageAnalysisTool: {e}")
+        # Continue without image tool - non-critical
+
     return registry
