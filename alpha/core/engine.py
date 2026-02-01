@@ -15,6 +15,14 @@ from alpha.tasks.manager import TaskManager
 from alpha.memory.manager import MemoryManager
 from alpha.utils.config import Config
 from alpha.proactive import PatternLearner, TaskDetector, Notifier
+from alpha.learning import (
+    FeedbackLoop,
+    FeedbackLoopConfig,
+    FeedbackLoopMode,
+    LogAnalyzer,
+    ImprovementExecutor,
+    LearningStore
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +74,50 @@ class AlphaEngine:
             self.notifier = None
             logger.info("Proactive intelligence disabled in config")
 
+        # Self-Improvement Loop components (REQ-5.1.5)
+        self.improvement_task: Optional[asyncio.Task] = None
+        improvement_enabled = getattr(config, 'improvement_loop', {}).get('enabled', False)
+        if improvement_enabled:
+            improvement_db = getattr(config, 'improvement_loop', {}).get('database', 'data/alpha_learning.db')
+            loop_config_dict = getattr(config, 'improvement_loop', {}).get('config', {})
+
+            # Parse feedback loop mode
+            mode_str = loop_config_dict.get('mode', 'semi_auto')
+            mode = FeedbackLoopMode(mode_str)
+
+            # Create FeedbackLoopConfig
+            loop_config = FeedbackLoopConfig(
+                mode=mode,
+                analysis_frequency=loop_config_dict.get('analysis_frequency', 'daily'),
+                analysis_days=loop_config_dict.get('analysis_days', 7),
+                min_confidence=loop_config_dict.get('min_confidence', 0.7),
+                max_daily_improvements=loop_config_dict.get('max_daily_improvements', 5),
+                enable_rollback=loop_config_dict.get('enable_rollback', True),
+                dry_run_first=loop_config_dict.get('dry_run_first', True)
+            )
+
+            # Initialize feedback loop components
+            self.learning_store = LearningStore(database_path=improvement_db)
+            self.log_analyzer = LogAnalyzer(learning_store=self.learning_store)
+            self.improvement_executor = ImprovementExecutor(
+                config_path=getattr(config, 'config_file', 'config.yaml'),
+                learning_store=self.learning_store
+            )
+            self.feedback_loop = FeedbackLoop(
+                config=loop_config,
+                log_analyzer=self.log_analyzer,
+                improvement_executor=self.improvement_executor,
+                learning_store=self.learning_store,
+                scheduler=None  # Will use background loop instead
+            )
+            logger.info("Self-improvement loop components initialized")
+        else:
+            self.feedback_loop = None
+            self.learning_store = None
+            self.log_analyzer = None
+            self.improvement_executor = None
+            logger.info("Self-improvement loop disabled in config")
+
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._handle_shutdown_signal)
         signal.signal(signal.SIGTERM, self._handle_shutdown_signal)
@@ -101,6 +153,15 @@ class AlphaEngine:
                 # Start background proactive loop
                 self.proactive_task = asyncio.create_task(self._proactive_loop())
                 logger.info("Proactive intelligence loop started")
+
+            # Initialize self-improvement loop (REQ-5.1.5)
+            if self.feedback_loop:
+                await self.feedback_loop.start()
+                logger.info("Self-improvement feedback loop initialized")
+
+                # Start background improvement loop
+                self.improvement_task = asyncio.create_task(self._improvement_loop())
+                logger.info("Self-improvement loop started")
 
             self.running = True
             logger.info("Alpha started successfully")
@@ -189,6 +250,19 @@ class AlphaEngine:
                 await self.pattern_learner.close()
                 logger.info("Pattern learner closed")
 
+            # Cancel improvement loop (REQ-5.1.5)
+            if self.improvement_task and not self.improvement_task.done():
+                self.improvement_task.cancel()
+                try:
+                    await self.improvement_task
+                except asyncio.CancelledError:
+                    logger.info("Improvement loop cancelled")
+
+            # Close self-improvement components
+            if self.feedback_loop:
+                await self.feedback_loop.stop()
+                logger.info("Self-improvement feedback loop stopped")
+
             # Cancel all running tasks
             await self.task_manager.cancel_all()
 
@@ -222,6 +296,15 @@ class AlphaEngine:
                 "enabled": True,
                 "pattern_count": len(await self.pattern_learner.get_patterns()),
                 "loop_running": self.proactive_task and not self.proactive_task.done()
+            }
+
+        # Add self-improvement status
+        if self.feedback_loop:
+            health["self_improvement"] = {
+                "enabled": True,
+                "loop_running": self.improvement_task and not self.improvement_task.done(),
+                "cycle_count": getattr(self.feedback_loop, 'cycle_count', 0),
+                "last_cycle": getattr(self.feedback_loop, 'last_cycle_time', None)
             }
 
         return health
@@ -369,3 +452,63 @@ class AlphaEngine:
 
         except Exception as e:
             logger.error(f"Failed to send proactive notification: {e}", exc_info=True)
+
+    async def _improvement_loop(self):
+        """
+        Background loop for continuous self-improvement (REQ-5.1.5).
+
+        This loop periodically runs the feedback cycle:
+        1. Analyze execution logs for patterns
+        2. Generate improvement recommendations
+        3. Apply safe improvements automatically
+        4. Track results and metrics
+        """
+        logger.info("Self-improvement loop started")
+
+        improvement_config = getattr(self.config, 'improvement_loop', {})
+        check_interval = improvement_config.get('check_interval', 86400)  # Default: daily (24 hours)
+        min_uptime = improvement_config.get('min_uptime_for_analysis', 3600)  # 1 hour minimum uptime
+
+        # Track last analysis time
+        last_analysis = datetime.now()
+
+        while self.running:
+            try:
+                # Calculate time since last analysis
+                time_since_analysis = (datetime.now() - last_analysis).total_seconds()
+
+                # Check if it's time for next analysis cycle
+                if time_since_analysis >= check_interval:
+                    # Ensure minimum uptime before analyzing
+                    uptime = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+                    if uptime < min_uptime:
+                        logger.info(f"Skipping improvement cycle - uptime too short ({uptime:.0f}s < {min_uptime}s)")
+                    else:
+                        # Run feedback loop cycle
+                        logger.info("Starting self-improvement cycle...")
+                        cycle_result = await self.feedback_loop.run_cycle()
+
+                        # Log cycle completion
+                        logger.info(f"Self-improvement cycle complete: {cycle_result.get('summary', {})}")
+
+                        # Record cycle in memory for tracking
+                        await self.memory_manager.add_system_event(
+                            "improvement_cycle",
+                            {
+                                "cycle_number": cycle_result.get('cycle_number'),
+                                "patterns_found": cycle_result.get('steps', {}).get('analysis', {}).get('pattern_count', 0),
+                                "improvements_applied": cycle_result.get('steps', {}).get('apply', {}).get('applied_count', 0),
+                                "timestamp": datetime.now().isoformat()
+                            }
+        )
+
+                        last_analysis = datetime.now()
+
+            except asyncio.CancelledError:
+                logger.info("Self-improvement loop cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in self-improvement loop: {e}", exc_info=True)
+
+            # Sleep until next check
+            await asyncio.sleep(min(check_interval, 3600))  # Check at least every hour
