@@ -15,6 +15,12 @@ from alpha.tasks.manager import TaskManager
 from alpha.memory.manager import MemoryManager
 from alpha.utils.config import Config
 from alpha.proactive import PatternLearner, TaskDetector, Notifier
+from alpha.workflow import (
+    WorkflowPatternDetector,
+    WorkflowSuggestionGenerator,
+    WorkflowOptimizer,
+    WorkflowLibrary
+)
 from alpha.learning import (
     FeedbackLoop,
     FeedbackLoopConfig,
@@ -68,10 +74,41 @@ class AlphaEngine:
             )
             self.notifier = Notifier()
             logger.info("Proactive intelligence components initialized")
+
+            # Workflow Intelligence components (REQ-6.2.5)
+            workflow_config = proactive_config.get('workflow_detection', {})
+            if workflow_config.get('enabled', True):
+                self.workflow_pattern_detector = WorkflowPatternDetector(
+                    memory_store=self.memory_manager,
+                    min_frequency=workflow_config.get('min_pattern_frequency', 3),
+                    min_confidence=workflow_config.get('min_confidence', 0.7),
+                    lookback_days=workflow_config.get('lookback_days', 30)
+                )
+                self.workflow_suggestion_generator = WorkflowSuggestionGenerator(
+                    pattern_detector=self.workflow_pattern_detector,
+                    memory_store=self.memory_manager
+                )
+
+                # Initialize workflow library with default path
+                workflow_db = proactive_config.get('workflow_database', 'data/alpha_workflows.db')
+                self.workflow_library = WorkflowLibrary(database_path=workflow_db)
+
+                self.workflow_optimizer = WorkflowOptimizer()
+                logger.info("Workflow intelligence components initialized")
+            else:
+                self.workflow_pattern_detector = None
+                self.workflow_suggestion_generator = None
+                self.workflow_library = None
+                self.workflow_optimizer = None
+                logger.info("Workflow intelligence disabled in config")
         else:
             self.pattern_learner = None
             self.task_detector = None
             self.notifier = None
+            self.workflow_pattern_detector = None
+            self.workflow_suggestion_generator = None
+            self.workflow_library = None
+            self.workflow_optimizer = None
             logger.info("Proactive intelligence disabled in config")
 
         # Self-Improvement Loop components (REQ-5.1.5)
@@ -322,6 +359,12 @@ class AlphaEngine:
         pattern_learning_interval = 3600  # Learn patterns every hour
         last_pattern_learning = datetime.now()
 
+        # Workflow detection settings (REQ-6.2.5)
+        workflow_detection_interval = proactive_config.get('workflow_detection', {}).get('analysis_interval', 3600)
+        last_workflow_detection = datetime.now()
+        workflow_optimization_interval = proactive_config.get('workflow_optimization', {}).get('analysis_interval', 86400)
+        last_workflow_optimization = datetime.now()
+
         while self.running:
             try:
                 # Periodic pattern learning from conversation history (REQ-6.1.2)
@@ -344,6 +387,20 @@ class AlphaEngine:
                     # Otherwise, queue for user notification
                     elif suggestion.confidence >= 0.7:
                         await self._notify_proactive_suggestion(suggestion)
+
+                # Workflow pattern detection (REQ-6.2.5)
+                if self.workflow_pattern_detector:
+                    time_since_workflow_detection = (datetime.now() - last_workflow_detection).total_seconds()
+                    if time_since_workflow_detection >= workflow_detection_interval:
+                        await self._detect_workflow_patterns()
+                        last_workflow_detection = datetime.now()
+
+                # Workflow optimization analysis (REQ-6.2.5)
+                if self.workflow_optimizer and self.workflow_library:
+                    time_since_optimization = (datetime.now() - last_workflow_optimization).total_seconds()
+                    if time_since_optimization >= workflow_optimization_interval:
+                        await self._analyze_workflow_optimizations()
+                        last_workflow_optimization = datetime.now()
 
             except asyncio.CancelledError:
                 logger.info("Proactive loop cancelled")
@@ -512,3 +569,180 @@ class AlphaEngine:
 
             # Sleep until next check
             await asyncio.sleep(min(check_interval, 3600))  # Check at least every hour
+
+    async def _detect_workflow_patterns(self):
+        """
+        Detect workflow patterns from task execution history (REQ-6.2.5).
+        
+        Analyzes recent task sequences and generates workflow suggestions.
+        """
+        try:
+            logger.info("Detecting workflow patterns...")
+            
+            # Detect patterns
+            patterns = await self.workflow_pattern_detector.detect_workflow_patterns()
+            
+            if not patterns:
+                logger.info("No workflow patterns detected")
+                return
+            
+            logger.info(f"Detected {len(patterns)} workflow patterns")
+            
+            # Generate suggestions from patterns
+            suggestions = await self.workflow_suggestion_generator.generate_workflow_suggestions(
+                patterns=patterns,
+                max_suggestions=5
+            )
+            
+            if not suggestions:
+                logger.info("No workflow suggestions generated")
+                return
+            
+            logger.info(f"Generated {len(suggestions)} workflow suggestions")
+            
+            # Process suggestions
+            proactive_config = getattr(self.config, 'proactive', {})
+            workflow_config = proactive_config.get('workflow_detection', {})
+            auto_create = workflow_config.get('auto_create_workflows', False)
+            auto_create_threshold = workflow_config.get('min_confidence', 0.9)
+            
+            for suggestion in suggestions:
+                # Auto-create high-confidence workflows if enabled
+                if auto_create and suggestion.confidence >= auto_create_threshold:
+                    try:
+                        # Create workflow from suggestion
+                        workflow_def = await self.workflow_suggestion_generator.create_workflow_from_pattern(
+                            pattern=None,  # Pattern already in suggestion
+                            suggestion=suggestion
+                        )
+                        
+                        # Save to library
+                        workflow_id = await self.workflow_library.save_workflow(workflow_def)
+                        
+                        logger.info(f"Auto-created workflow: {workflow_def.get('name')} (ID: {workflow_id})")
+                        
+                        # Log creation
+                        await self.memory_manager.add_system_event(
+                            "workflow_auto_created",
+                            {
+                                "workflow_id": workflow_id,
+                                "pattern_id": suggestion.pattern_id,
+                                "confidence": suggestion.confidence,
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to auto-create workflow: {e}", exc_info=True)
+                
+                # Notify user about high-confidence suggestions
+                elif suggestion.confidence >= 0.7:
+                    if self.notifier:
+                        await self.notifier.notify(
+                            title="Workflow Suggestion",
+                            message=f"{suggestion.suggested_name}: {suggestion.description}",
+                            priority="normal",
+                            notification_type="workflow_suggestion",
+                            metadata={
+                                "suggestion_id": suggestion.suggestion_id,
+                                "confidence": suggestion.confidence,
+                                "pattern_id": suggestion.pattern_id
+                            }
+                        )
+                    
+                    # Log suggestion
+                    await self.memory_manager.add_system_event(
+                        "workflow_suggested",
+                        {
+                            "suggestion_id": suggestion.suggestion_id,
+                            "pattern_id": suggestion.pattern_id,
+                            "suggested_name": suggestion.suggested_name,
+                            "confidence": suggestion.confidence,
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    )
+        
+        except Exception as e:
+            logger.error(f"Workflow pattern detection failed: {e}", exc_info=True)
+
+    async def _analyze_workflow_optimizations(self):
+        """
+        Analyze existing workflows for optimization opportunities (REQ-6.2.5).
+        
+        Examines workflow execution history and recommends improvements.
+        """
+        try:
+            logger.info("Analyzing workflow optimizations...")
+            
+            # Get all workflows
+            workflows = await self.workflow_library.list_workflows()
+            
+            if not workflows:
+                logger.info("No workflows to optimize")
+                return
+            
+            optimization_count = 0
+            
+            # Analyze each workflow
+            for workflow in workflows:
+                try:
+                    # Get execution history
+                    history = await self.workflow_library.get_execution_history(
+                        workflow_id=workflow.get('id'),
+                        limit=10
+                    )
+                    
+                    if not history or len(history) < 5:
+                        continue  # Need at least 5 executions for meaningful analysis
+                    
+                    # Analyze for optimizations
+                    optimizations = await self.workflow_optimizer.analyze_workflow(
+                        workflow_id=workflow.get('id'),
+                        min_executions=5
+                    )
+                    
+                    if optimizations:
+                        optimization_count += len(optimizations)
+                        logger.info(f"Found {len(optimizations)} optimizations for workflow: {workflow.get('name')}")
+                        
+                        # Notify user about optimization opportunities
+                        if self.notifier:
+                            for opt in optimizations:
+                                await self.notifier.notify(
+                                    title="Workflow Optimization",
+                                    message=f"{workflow.get('name')}: {opt.description} ({opt.potential_improvement})",
+                                    priority="low",
+                                    notification_type="workflow_optimization",
+                                    metadata={
+                                        "workflow_id": workflow.get('id'),
+                                        "optimization_type": opt.optimization_type,
+                                        "confidence": opt.confidence
+                                    }
+                                )
+                        
+                        # Log optimizations
+                        await self.memory_manager.add_system_event(
+                            "workflow_optimization_detected",
+                            {
+                                "workflow_id": workflow.get('id'),
+                                "workflow_name": workflow.get('name'),
+                                "optimization_count": len(optimizations),
+                                "optimizations": [
+                                    {
+                                        "type": opt.optimization_type,
+                                        "description": opt.description,
+                                        "improvement": opt.potential_improvement
+                                    }
+                                    for opt in optimizations
+                                ],
+                                "timestamp": datetime.now().isoformat()
+                            }
+                        )
+                
+                except Exception as e:
+                    logger.error(f"Failed to optimize workflow {workflow.get('name')}: {e}")
+                    continue
+            
+            logger.info(f"Workflow optimization analysis complete: {optimization_count} optimizations found")
+        
+        except Exception as e:
+            logger.error(f"Workflow optimization analysis failed: {e}", exc_info=True)
