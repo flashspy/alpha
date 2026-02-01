@@ -6,6 +6,7 @@ Execute skills with sandboxing and security controls.
 
 import logging
 import asyncio
+import time
 from typing import Optional
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from alpha.skills.base import AgentSkill, SkillResult
 from alpha.skills.registry import SkillRegistry
 from alpha.skills.marketplace import SkillMarketplace
 from alpha.skills.installer import SkillInstaller
+from alpha.skills.performance_tracker import PerformanceTracker
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -36,12 +38,16 @@ class SkillExecutor:
         registry: SkillRegistry,
         marketplace: SkillMarketplace,
         installer: SkillInstaller,
-        auto_install: bool = True
+        auto_install: bool = True,
+        performance_tracker: Optional['PerformanceTracker'] = None,
+        optimizer: Optional['SkillOptimizer'] = None
     ):
         self.registry = registry
         self.marketplace = marketplace
         self.installer = installer
         self.auto_install = auto_install
+        self.performance_tracker = performance_tracker
+        self.optimizer = optimizer
 
     async def execute(
         self,
@@ -66,6 +72,7 @@ class SkillExecutor:
             Skill execution result
         """
         logger.info(f"Executing skill: {skill_name}")
+        start_time = time.time()
 
         # Check if skill is installed
         skill = self.registry.get_skill(skill_name)
@@ -78,18 +85,26 @@ class SkillExecutor:
             if success:
                 skill = self.registry.get_skill(skill_name)
             else:
-                return SkillResult(
+                result = SkillResult(
                     success=False,
                     output=None,
                     error=f"Failed to auto-install skill: {skill_name}"
                 )
+                await self._record_execution(
+                    skill_name, result, time.time() - start_time
+                )
+                return result
 
         if not skill:
-            return SkillResult(
+            result = SkillResult(
                 success=False,
                 output=None,
                 error=f"Skill not found and auto-install disabled: {skill_name}"
             )
+            await self._record_execution(
+                skill_name, result, time.time() - start_time
+            )
+            return result
 
         # Execute with timeout
         try:
@@ -101,22 +116,83 @@ class SkillExecutor:
             else:
                 result = await self.registry.execute_skill(skill_name, **kwargs)
 
+            await self._record_execution(
+                skill_name, result, time.time() - start_time
+            )
             return result
 
         except asyncio.TimeoutError:
             logger.error(f"Skill execution timed out: {skill_name}")
-            return SkillResult(
+            result = SkillResult(
                 success=False,
                 output=None,
                 error=f"Execution timed out after {timeout} seconds"
             )
+            await self._record_execution(
+                skill_name, result, time.time() - start_time
+            )
+            return result
         except Exception as e:
             logger.error(f"Error executing skill {skill_name}: {e}", exc_info=True)
-            return SkillResult(
+            result = SkillResult(
                 success=False,
                 output=None,
                 error=str(e)
             )
+            await self._record_execution(
+                skill_name, result, time.time() - start_time
+            )
+            return result
+
+    async def _record_execution(
+        self,
+        skill_name: str,
+        result: SkillResult,
+        execution_time: float
+    ):
+        """
+        Record skill execution metrics.
+
+        Args:
+            skill_name: Name of the executed skill
+            result: Execution result
+            execution_time: Time taken in seconds
+        """
+        if not self.performance_tracker:
+            return
+
+        try:
+            await self.performance_tracker.record_execution(
+                skill_id=skill_name,
+                success=result.success,
+                execution_time=execution_time,
+                tokens_used=0,  # TODO: Extract from result if available
+                cost_estimate=0.0,  # TODO: Calculate based on tokens
+                error_message=result.error if not result.success else None,
+                metadata=result.metadata if hasattr(result, 'metadata') else {}
+            )
+
+            # Trigger exploration on failure (event-driven proactive learning)
+            if not result.success and self.optimizer:
+                logger.info(
+                    f"Skill execution failed: {skill_name}. "
+                    "Triggering exploration for alternatives..."
+                )
+                try:
+                    # Don't await to avoid blocking execution return
+                    asyncio.create_task(
+                        self.optimizer.trigger_exploration_for_failure(
+                            task_description=f"Execute skill: {skill_name}",
+                            error_message=result.error
+                        )
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to trigger exploration: {e}"
+                    )
+
+        except Exception as e:
+            logger.warning(f"Failed to record execution metrics: {e}")
 
     async def _auto_install_skill(self, skill_name: str) -> bool:
         """

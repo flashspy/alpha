@@ -20,12 +20,18 @@ class SkillMatcher:
     - Keyword-based matching
     - Fast metadata scanning
     - Lazy loading of skill content
+    - Performance-based prioritization
     """
 
-    def __init__(self, skills_dir: Path = None):
+    def __init__(
+        self,
+        skills_dir: Path = None,
+        performance_tracker: Optional[Any] = None
+    ):
         self.skills_dir = skills_dir or Path("skills")
         self.skills_cache: List[Dict] = []
         self.cache_loaded = False
+        self.performance_tracker = performance_tracker
 
     async def load_skills_cache(self) -> bool:
         """Load available skills from local directory (metadata only)."""
@@ -107,14 +113,14 @@ class SkillMatcher:
 
     def match_skills(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """
-        Match skills based on query.
+        Match skills based on query with performance-based prioritization.
 
         Args:
             query: User query or task description
             max_results: Maximum number of results to return
 
         Returns:
-            List of matching skills with relevance scores
+            List of matching skills with relevance scores (sorted by performance)
         """
         if not self.cache_loaded:
             logger.warning("Skills cache not loaded")
@@ -132,21 +138,71 @@ class SkillMatcher:
         # Score each skill
         scored_skills = []
         for skill in self.skills_cache:
-            score = self._calculate_relevance(skill, keywords, query_lower)
-            if score > 0:
+            relevance_score = self._calculate_relevance(skill, keywords, query_lower)
+            if relevance_score > 0:
+                skill_id = skill['id']
+
+                # Get performance boost
+                performance_boost = self._get_performance_boost(skill_id)
+
+                # Combine relevance and performance
+                # Relevance is primary (0-1), performance provides a boost (0-0.5)
+                final_score = relevance_score + (performance_boost * 0.5)
+
                 scored_skills.append({
-                    'id': skill['id'],
+                    'id': skill_id,
                     'name': skill['name'],
                     'description': skill.get('description', ''),
                     'path': skill.get('path', ''),
-                    'score': score,
+                    'score': final_score,
+                    'relevance': relevance_score,
+                    'performance_boost': performance_boost,
                     'source': 'local'  # Mark as local skill
                 })
 
-        # Sort by score (descending)
+        # Sort by final score (descending)
         scored_skills.sort(key=lambda x: x['score'], reverse=True)
 
         return scored_skills[:max_results]
+
+    def _get_performance_boost(self, skill_id: str) -> float:
+        """
+        Calculate performance boost for skill ranking.
+
+        Args:
+            skill_id: Skill identifier
+
+        Returns:
+            Performance boost score (0-1)
+        """
+        if not self.performance_tracker:
+            return 0.0
+
+        try:
+            stats = self.performance_tracker.get_skill_stats(skill_id)
+            if not stats:
+                return 0.0  # No performance history
+
+            # Factors for performance boost:
+            # - Success rate (0-1)
+            # - ROI score (0-1+, capped at 1)
+            # - Usage frequency (normalized)
+
+            success_rate = stats.success_rate
+            roi_score = min(stats.roi_score, 1.0) if stats.roi_score > 0 else 0.0
+
+            # Calculate boost (weighted combination)
+            boost = (
+                success_rate * 0.6 +  # Success is most important
+                roi_score * 0.3 +     # ROI is valuable
+                0.1                    # Small boost for having any history
+            )
+
+            return min(boost, 1.0)
+
+        except Exception as e:
+            logger.debug(f"Error getting performance boost for {skill_id}: {e}")
+            return 0.0
 
     def _extract_keywords(self, query: str) -> List[str]:
         """Extract relevant keywords from query."""

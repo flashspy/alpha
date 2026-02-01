@@ -345,6 +345,100 @@ class SkillOptimizer:
 
                 result.recommendations.append(recommendation)
 
+    async def trigger_exploration_for_failure(
+        self,
+        task_description: str,
+        error_message: Optional[str] = None
+    ) -> List[OptimizationRecommendation]:
+        """
+        Trigger immediate skill exploration in response to task failure.
+
+        This provides event-driven proactive exploration instead of
+        waiting for scheduled exploration intervals.
+
+        Args:
+            task_description: Description of the failed task
+            error_message: Optional error message from failure
+
+        Returns:
+            List of skill recommendations to address the failure
+        """
+        logger.info(
+            f"Triggering exploration for task failure: {task_description}"
+        )
+
+        recommendations = []
+
+        try:
+            # Search marketplace for skills that might help
+            search_query = task_description
+            if error_message:
+                # Extract key terms from error for better search
+                search_query = f"{task_description} {error_message}"
+
+            discovered_skills = await self.marketplace.search(
+                query=search_query,
+                limit=5  # Top 5 potentially relevant skills
+            )
+
+            logger.info(
+                f"Found {len(discovered_skills)} skills for failed task"
+            )
+
+            # Evaluate each discovered skill
+            for skill_metadata in discovered_skills:
+                skill_id = skill_metadata.name
+
+                # Skip if already installed
+                if self.registry.get_skill(skill_id):
+                    continue
+
+                # Quick evaluation
+                try:
+                    evaluation = await self.evaluator.evaluate_skill(
+                        skill_metadata
+                    )
+
+                    # Only recommend if quality is acceptable
+                    if evaluation.overall_score >= 0.6:
+                        recommendation = OptimizationRecommendation(
+                            skill_id=skill_id,
+                            action=OptimizationAction.ACTIVATE,
+                            priority=evaluation.overall_score,
+                            reason=(
+                                f"May address task failure: {task_description}. "
+                                f"Quality score: {evaluation.overall_score:.2f}"
+                            ),
+                            expected_benefit=(
+                                f"Potential solution for failed task"
+                            ),
+                            estimated_cost=0.0,
+                            metadata={
+                                "trigger": "task_failure",
+                                "task": task_description,
+                                "error": error_message
+                            }
+                        )
+                        recommendations.append(recommendation)
+
+                except Exception as e:
+                    logger.warning(
+                        f"Error evaluating skill {skill_id}: {e}"
+                    )
+                    continue
+
+            logger.info(
+                f"Generated {len(recommendations)} recommendations "
+                f"for failed task"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Error in triggered exploration: {e}", exc_info=True
+            )
+
+        return recommendations
+
     async def optimize_skills(self):
         """
         Optimize skill selection and prioritization.
@@ -468,18 +562,62 @@ class SkillOptimizer:
         return result
 
     async def _prune_skill(self, skill_id: str):
-        """Actually prune a skill (unregister, delete files)."""
+        """
+        Actually prune a skill (unregister, delete files, mark in database).
+
+        Args:
+            skill_id: Skill identifier to prune
+        """
         try:
             # Unregister from registry
             await self.registry.unregister(skill_id)
+            logger.info(f"Unregistered skill: {skill_id}")
 
-            # TODO: Delete skill files if needed
-            # TODO: Mark in database as pruned
+            # Delete skill files
+            skill_path = self.registry.skills_dir / skill_id
+            if skill_path.exists() and skill_path.is_dir():
+                import shutil
+                shutil.rmtree(skill_path)
+                logger.info(f"Deleted skill files: {skill_path}")
+
+            # Mark in database as pruned
+            await self._mark_skill_pruned(skill_id)
+            logger.info(f"Marked skill as pruned in database: {skill_id}")
 
             logger.info(f"Successfully pruned skill: {skill_id}")
 
         except Exception as e:
             logger.error(f"Error pruning skill {skill_id}: {e}", exc_info=True)
+
+    async def _mark_skill_pruned(self, skill_id: str):
+        """
+        Mark skill as pruned in database.
+
+        Args:
+            skill_id: Skill identifier
+        """
+        if not self.performance_tracker or not hasattr(
+            self.performance_tracker, 'learning_store'
+        ):
+            logger.warning("Performance tracker or learning store not available")
+            return
+
+        try:
+            # Store pruning record in learning store
+            store = self.performance_tracker.learning_store
+            if store and hasattr(store, 'conn'):
+                async with store.conn as conn:
+                    await conn.execute("""
+                        INSERT INTO pruned_skills (skill_id, pruned_at, reason)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(skill_id) DO UPDATE SET
+                            pruned_at = excluded.pruned_at,
+                            reason = excluded.reason
+                    """, (skill_id, datetime.now().isoformat(), "Automatic pruning"))
+                    await conn.commit()
+
+        except Exception as e:
+            logger.debug(f"Could not mark skill as pruned in database: {e}")
 
     def get_recommendations(
         self,

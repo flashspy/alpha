@@ -26,6 +26,7 @@ class LearningStore:
     - improvements_applied: Applied improvements and their outcomes
     - success_metrics: Task success rates and performance metrics
     - correlations: Correlations between patterns and outcomes
+    - pruned_skills: Record of pruned skills for tracking
     """
 
     def __init__(self, db_path: str = "data/learning.db"):
@@ -116,6 +117,18 @@ class LearningStore:
                 metadata TEXT,
                 created_at TIMESTAMP NOT NULL,
                 updated_at TIMESTAMP NOT NULL
+            )
+        """)
+
+        # Pruned skills table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pruned_skills (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                skill_id TEXT UNIQUE NOT NULL,
+                pruned_at TIMESTAMP NOT NULL,
+                reason TEXT,
+                performance_data TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
