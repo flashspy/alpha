@@ -51,16 +51,17 @@ class ScreenshotDetector:
     # Error-related keywords and patterns
     ERROR_PATTERNS = [
         r'\b(error|exception|traceback|stack trace)\b',
-        r'\b(crash|freeze|hang|stuck)\b',
-        r'\b(fail|failed|failing|failure)\b',
-        r'\b(bug|issue|problem|broken)\b',
+        r'\b(crash(ed|es|ing)?|freez(e|es|ing)|frozen|hang(s|ing)?|hung|stuck)\b',
+        r'\b(fail(s|ed|ing)?|failure)\b',
+        r'\b(bug|issue|problem)\b',  # Removed 'broken' to avoid conflict with UI patterns
         r'\b(warning|alert)\b',
     ]
 
     # UI/Visual issue patterns
     UI_PATTERNS = [
         r'\b(button|link|menu|page|screen|window)\s+(looks?|appears?|shows?)\b',
-        r'\b(layout|design|style|css)\s+(issue|problem|wrong|broken)\b',
+        r'\b(layout|design|style|css)\s+(is\s+)?(issue|problem|wrong|broken)\b',  # Support "is broken" etc
+        r'\b(layout|design|style|appearance)\s+(looks?|seems?|appears?)\s+(odd|weird|strange|wrong|broken|bad)\b',  # Support "looks odd" etc
         r'\b(alignment|spacing|margin|padding)\b',
         r'\b(color|font|size|position)\s+(is|looks|seems)\b',
         r'\b(overlap|cutoff|hidden|missing)\b',
@@ -103,9 +104,8 @@ class ScreenshotDetector:
         """
         # Check for error descriptions
         if self.error_regex.search(user_message):
-            # Strong signal: user describing error
-            if re.search(r'\b(I|I\'m|I am)\s+(seeing|getting|receiving)', user_message, re.IGNORECASE):
-                return ScreenshotTriggerType.ERROR_DESCRIPTION
+            # User describing error - screenshot would help
+            return ScreenshotTriggerType.ERROR_DESCRIPTION
 
         # Check for UI issues
         if self.ui_regex.search(user_message):
@@ -114,7 +114,7 @@ class ScreenshotDetector:
         # Check for comparison requests
         if self.comparison_regex.search(user_message):
             # Check if comparing visual elements
-            if re.search(r'\b(design|layout|page|screenshot|image)\b', user_message, re.IGNORECASE):
+            if re.search(r'\b(designs?|layouts?|pages?|screenshots?|images?)\b', user_message, re.IGNORECASE):
                 return ScreenshotTriggerType.VISUAL_COMPARISON
 
         # Check for visual descriptions (lower priority)

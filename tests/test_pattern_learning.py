@@ -37,6 +37,11 @@ def create_test_config_with_proactive(tmpdir):
         }
     }
 
+    # Add improvement_loop configuration to prevent MagicMock errors
+    config.improvement_loop = {
+        'enabled': False  # Disable for pattern learning tests
+    }
+
     return config
 
 

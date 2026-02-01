@@ -42,6 +42,11 @@ def create_test_config(tmpdir, proactive_enabled=True):
             'enabled': False
         }
 
+    # Add improvement_loop configuration to prevent MagicMock errors
+    config.improvement_loop = {
+        'enabled': False  # Disable for proactive tests
+    }
+
     return config
 
 

@@ -76,7 +76,7 @@ class AlphaEngine:
             logger.info("Proactive intelligence components initialized")
 
             # Workflow Intelligence components (REQ-6.2.5)
-            workflow_config = proactive_config.get('workflow_detection', {})
+            workflow_config = getattr(config, 'proactive', {}).get('workflow_detection', {})
             if workflow_config.get('enabled', True):
                 self.workflow_pattern_detector = WorkflowPatternDetector(
                     memory_store=self.memory_manager,
@@ -84,14 +84,15 @@ class AlphaEngine:
                     min_confidence=workflow_config.get('min_confidence', 0.7),
                     lookback_days=workflow_config.get('lookback_days', 30)
                 )
-                self.workflow_suggestion_generator = WorkflowSuggestionGenerator(
-                    pattern_detector=self.workflow_pattern_detector,
-                    memory_store=self.memory_manager
-                )
 
-                # Initialize workflow library with default path
-                workflow_db = proactive_config.get('workflow_database', 'data/alpha_workflows.db')
-                self.workflow_library = WorkflowLibrary(database_path=workflow_db)
+                # Initialize workflow library with default path (needed by suggestion generator)
+                workflow_db = getattr(config, 'proactive', {}).get('workflow_database', 'data/alpha_workflows.db')
+                self.workflow_library = WorkflowLibrary(db_path=workflow_db)
+
+                self.workflow_suggestion_generator = WorkflowSuggestionGenerator(
+                    suggestion_store=None,
+                    workflow_library=self.workflow_library
+                )
 
                 self.workflow_optimizer = WorkflowOptimizer()
                 logger.info("Workflow intelligence components initialized")
