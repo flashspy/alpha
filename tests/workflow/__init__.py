@@ -1,3 +1,3 @@
 """
-Workflow tests package
+Workflow system tests
 """

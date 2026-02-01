@@ -1,33 +1,28 @@
 """
-Workflow Orchestration System
+Workflow Orchestration System - Proactive Integration Components
 
-This module provides workflow definition, building, execution, and management
-capabilities for Alpha AI Assistant.
+This module provides proactive workflow pattern detection, suggestion generation,
+and optimization capabilities.
 """
 
-from .definition import (
-    WorkflowDefinition,
-    WorkflowStep,
-    WorkflowParameter,
-    WorkflowTrigger,
-    StepErrorStrategy,
+from .pattern_detector import (
+    WorkflowPattern,
+    WorkflowPatternDetector
 )
-from .schema import WorkflowSchema, validate_workflow
-from .library import WorkflowLibrary
-from .executor import WorkflowExecutor, ExecutionContext, ExecutionResult
-from .builder import WorkflowBuilder
+from .suggestion_generator import (
+    WorkflowSuggestion,
+    WorkflowSuggestionGenerator
+)
+from .optimizer import (
+    WorkflowOptimization,
+    WorkflowOptimizer
+)
 
 __all__ = [
-    "WorkflowDefinition",
-    "WorkflowStep",
-    "WorkflowParameter",
-    "WorkflowTrigger",
-    "StepErrorStrategy",
-    "WorkflowSchema",
-    "validate_workflow",
-    "WorkflowLibrary",
-    "WorkflowExecutor",
-    "ExecutionContext",
-    "ExecutionResult",
-    "WorkflowBuilder",
+    "WorkflowPattern",
+    "WorkflowPatternDetector",
+    "WorkflowSuggestion",
+    "WorkflowSuggestionGenerator",
+    "WorkflowOptimization",
+    "WorkflowOptimizer",
 ]
