@@ -35,7 +35,14 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown"""
 
+    # Force output to stderr to ensure it's visible
+    import sys
+    print("=" * 80, file=sys.stderr, flush=True)
+    print(">>> LIFESPAN STARTUP STARTING <<<", file=sys.stderr, flush=True)
+    print("=" * 80, file=sys.stderr, flush=True)
+
     logger.info("Starting Alpha API Server...")
+    print(">>> Logger: Starting Alpha API Server...", file=sys.stderr, flush=True)
 
     # Load configuration from project root
     project_root = Path(__file__).parent.parent.parent
@@ -101,10 +108,12 @@ async def lifespan(app: FastAPI):
     engine_task = asyncio.create_task(engine.run())
 
     logger.info("Alpha API Server started successfully")
+    print(">>> LIFESPAN STARTUP COMPLETE <<<", file=sys.stderr, flush=True)
 
     yield
 
     # Shutdown
+    print(">>> LIFESPAN SHUTDOWN STARTING <<<", file=sys.stderr, flush=True)
     logger.info("Shutting down Alpha API Server...")
     await engine.shutdown()
     try:
@@ -153,7 +162,9 @@ def create_app() -> FastAPI:
         )
 
     # Include routers
-    app.include_router(websocket.router, prefix="/api/v1", tags=["chat"])
+    # Note: WebSocket routes must be included without prefix due to FastAPI limitation
+    # We'll manually add the prefix in the route definition
+    app.include_router(websocket.router, tags=["chat"])
     app.include_router(tasks.router, prefix="/api/v1", tags=["tasks"])
     app.include_router(status.router, prefix="/api/v1", tags=["status"])
     app.include_router(health.router, prefix="/api", tags=["health"])

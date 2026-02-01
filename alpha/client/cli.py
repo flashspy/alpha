@@ -106,7 +106,7 @@ class AlphaClient:
                 # Streaming text chunk
                 chunk = data.get("content", "")
                 response_text += chunk
-                console.print(chunk, end="", flush=True)
+                console.print(chunk, end="")
 
             elif msg_type == "done":
                 # Response complete

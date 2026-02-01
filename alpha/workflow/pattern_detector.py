@@ -84,7 +84,7 @@ class WorkflowPatternDetector:
         self.time_pattern = re.compile(r'\d{1,2}:\d{2}(:\d{2})?(\s*[AP]M)?', re.IGNORECASE)
         self.number_pattern = re.compile(r'\b\d+\b')
         self.branch_pattern = re.compile(r'feature/\S+|bugfix/\S+|hotfix/\S+')
-        self.path_pattern = re.compile(r'/[^\s]+|[A-Z]:\\[^\s]+')
+        self.path_pattern = re.compile(r'/[^\s]+|[A-Za-z]:\\[^\s]+')
 
     def normalize_task_description(self, description: str) -> str:
         """

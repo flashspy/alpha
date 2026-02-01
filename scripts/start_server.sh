@@ -56,12 +56,12 @@ source venv/bin/activate
 
 echo "Starting Alpha server..."
 
-# Start server in background using uvicorn directly
-nohup python3 -m uvicorn alpha.api.server:create_app \
-    --factory \
-    --host "${1:-0.0.0.0}" \
-    --port "${2:-8080}" \
-    > logs/alpha-api.log 2>&1 &
+# Activate virtual environment and start server
+cd "$PROJECT_ROOT"
+source venv/bin/activate
+
+# Start server using dedicated launcher
+nohup python3 run_server.py "${1:-0.0.0.0}" "${2:-8080}" > logs/alpha-api.log 2>&1 &
 SERVER_PID=$!
 
 # Save PID

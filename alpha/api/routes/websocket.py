@@ -44,7 +44,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.websocket("/ws/chat")
+@router.websocket("/api/v1/ws/chat")
 async def websocket_chat(websocket: WebSocket):
     """
     WebSocket endpoint for real-time chat.
@@ -65,12 +65,33 @@ async def websocket_chat(websocket: WebSocket):
     # Generate client ID (timestamp-based for simplicity)
     client_id = f"client_{datetime.now().timestamp()}"
 
-    await manager.connect(websocket, client_id)
+    logger.info(f"[DEBUG] WebSocket connection attempt from client_id={client_id}")
+
+    try:
+        await manager.connect(websocket, client_id)
+        logger.info(f"[DEBUG] WebSocket accepted for client_id={client_id}")
+    except Exception as e:
+        logger.error(f"[DEBUG] Failed to accept WebSocket: {e}", exc_info=True)
+        return
 
     # Get or create chat handler for this client
     # For now, we use a shared handler (single-user)
     # TODO: Support multiple users with separate handlers
-    chat_handler = get_chat_handler()
+    try:
+        chat_handler = get_chat_handler()
+        logger.info(f"[DEBUG] Got chat_handler successfully for client_id={client_id}")
+    except Exception as e:
+        logger.error(f"[DEBUG] Failed to get chat_handler: {e}", exc_info=True)
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "content": f"Failed to initialize chat handler: {str(e)}"
+            })
+            await websocket.close()
+        except:
+            pass
+        manager.disconnect(client_id)
+        return
 
     try:
         # Send welcome message
@@ -146,7 +167,7 @@ async def websocket_chat(websocket: WebSocket):
             pass
 
 
-@router.get("/ws/stats")
+@router.get("/api/v1/ws/stats")
 async def get_websocket_stats():
     """
     Get WebSocket connection statistics.

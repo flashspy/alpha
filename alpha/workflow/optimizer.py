@@ -255,13 +255,16 @@ class WorkflowOptimizer:
             # Get average step durations
             bottlenecks = self.identify_bottlenecks(execution_history)
 
-            # Look for consecutive slow steps that could potentially be parallelized
-            for i in range(len(bottlenecks) - 1):
-                step1_idx, step1_name, step1_duration = bottlenecks[i]
-                step2_idx, step2_name, step2_duration = bottlenecks[i + 1]
+            # Sort by step index to find consecutive steps
+            bottlenecks_by_index = sorted(bottlenecks, key=lambda x: x[0])
 
-                # Check if steps are consecutive
-                if step2_idx == step1_idx + 1:
+            # Look for consecutive slow steps that could potentially be parallelized
+            for i in range(len(bottlenecks_by_index) - 1):
+                step1_idx, step1_name, step1_duration = bottlenecks_by_index[i]
+                step2_idx, step2_name, step2_duration = bottlenecks_by_index[i + 1]
+
+                # Check if steps are consecutive and both are slow enough (>100ms)
+                if step2_idx == step1_idx + 1 and step1_duration > 100 and step2_duration > 100:
                     # Estimate potential improvement
                     total_sequential = step1_duration + step2_duration
                     total_parallel = max(step1_duration, step2_duration)

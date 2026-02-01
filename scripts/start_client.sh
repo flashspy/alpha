@@ -27,4 +27,8 @@ fi
 cd "$PROJECT_ROOT"
 source venv/bin/activate
 
+# Bypass proxy for localhost connections
+export NO_PROXY=localhost,127.0.0.1
+export no_proxy=localhost,127.0.0.1
+
 python3 -m alpha.client.cli "$@"
