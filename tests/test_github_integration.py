@@ -30,6 +30,7 @@ from alpha.integrations.github.models import (
     PullRequest,
     Comment,
     Commit,
+    Branch,
 )
 from alpha.integrations.github import GitHubClient
 from alpha.tools.github_tool import GitHubTool
@@ -1452,3 +1453,192 @@ async def test_github_tool_list_reviews_success(github_tool):
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+@pytest.mark.asyncio
+async def test_github_tool_list_reviews_success(github_tool):
+    """Test GitHubTool list_reviews operation."""
+    with patch.object(GitHubClient, "list_reviews") as mock_reviews:
+        mock_reviews.return_value = [
+            {
+                "id": 123456,
+                "state": "APPROVED",
+                "body": "LGTM!",
+                "user": {"login": "reviewer1"},
+                "submitted_at": "2024-01-02T00:00:00Z",
+                "html_url": "https://github.com/user/repo/pull/42#review-123456",
+            },
+            {
+                "id": 123457,
+                "state": "CHANGES_REQUESTED",
+                "body": "Please fix...",
+                "user": {"login": "reviewer2"},
+                "submitted_at": "2024-01-03T00:00:00Z",
+                "html_url": "https://github.com/user/repo/pull/42#review-123457",
+            },
+        ]
+
+        result = await github_tool.execute(
+            operation="list_reviews",
+            owner="user",
+            repo="repo",
+            number=42,
+        )
+
+        assert result.success is True
+        assert result.output["count"] == 2
+        assert result.output["reviews"][0]["state"] == "APPROVED"
+
+
+# ===== Branch Tests =====
+
+
+def test_branch_from_dict():
+    """Test Branch.from_dict()."""
+    data = {
+        "name": "main",
+        "commit": {
+            "sha": "abc123def456",
+            "url": "https://api.github.com/repos/user/repo/commits/abc123",
+        },
+        "protected": True,
+    }
+
+    branch = Branch.from_dict(data)
+    assert branch.name == "main"
+    assert branch.commit_sha == "abc123def456"
+    assert branch.commit_url == "https://api.github.com/repos/user/repo/commits/abc123"
+    assert branch.protected is True
+
+
+def test_client_list_branches(github_client):
+    """Test GitHubClient.list_branches()."""
+    with patch.object(github_client, "_paginate") as mock_paginate:
+        mock_paginate.return_value = [
+            {
+                "name": "main",
+                "commit": {"sha": "abc123", "url": "https://api.github.com/..."},
+                "protected": True,
+            },
+            {
+                "name": "develop",
+                "commit": {"sha": "def456", "url": "https://api.github.com/..."},
+                "protected": False,
+            },
+        ]
+
+        branches = github_client.list_branches("owner", "repo")
+
+        assert len(branches) == 2
+        assert branches[0].name == "main"
+        assert branches[0].protected is True
+        assert branches[1].name == "develop"
+        assert branches[1].protected is False
+        mock_paginate.assert_called_once_with("repos/owner/repo/branches", max_pages=5)
+
+
+def test_client_get_branch(github_client):
+    """Test GitHubClient.get_branch()."""
+    with patch.object(github_client, "_make_request") as mock_request:
+        mock_request.return_value = {
+            "name": "main",
+            "commit": {
+                "sha": "abc123def456",
+                "url": "https://api.github.com/repos/owner/repo/commits/abc123",
+            },
+            "protected": True,
+        }
+
+        branch = github_client.get_branch("owner", "repo", "main")
+
+        assert branch.name == "main"
+        assert branch.commit_sha == "abc123def456"
+        assert branch.protected is True
+        mock_request.assert_called_once_with("GET", "repos/owner/repo/branches/main")
+
+
+@pytest.mark.asyncio
+async def test_github_tool_list_branches_success(github_tool):
+    """Test GitHubTool list_branches operation."""
+    with patch.object(GitHubClient, "list_branches") as mock_branches:
+        branch1 = Branch(name="main", commit_sha="abc123", protected=True, commit_url="https://...")
+        branch2 = Branch(name="develop", commit_sha="def456", protected=False, commit_url="https://...")
+        mock_branches.return_value = [branch1, branch2]
+
+        result = await github_tool.execute(
+            operation="list_branches",
+            owner="user",
+            repo="repo",
+        )
+
+        assert result.success is True
+        assert result.output["count"] == 2
+        assert result.output["branches"][0]["name"] == "main"
+        assert result.output["branches"][0]["protected"] is True
+        assert result.output["branches"][1]["name"] == "develop"
+
+
+@pytest.mark.asyncio
+async def test_github_tool_list_branches_missing_params(github_tool):
+    """Test GitHubTool list_branches operation - missing parameters."""
+    result = await github_tool.execute(
+        operation="list_branches",
+        owner="user",
+        # Missing repo parameter
+    )
+
+    assert result.success is False
+    assert "owner and repo parameters required" in result.error
+
+
+@pytest.mark.asyncio
+async def test_github_tool_get_branch_success(github_tool):
+    """Test GitHubTool get_branch operation."""
+    with patch.object(GitHubClient, "get_branch") as mock_branch:
+        branch = Branch(
+            name="main",
+            commit_sha="abc123def456",
+            commit_url="https://api.github.com/...",
+            protected=True,
+        )
+        mock_branch.return_value = branch
+
+        result = await github_tool.execute(
+            operation="get_branch",
+            owner="user",
+            repo="repo",
+            branch="main",
+        )
+
+        assert result.success is True
+        assert result.output["name"] == "main"
+        assert result.output["commit_sha"] == "abc123def456"
+        assert result.output["protected"] is True
+
+
+@pytest.mark.asyncio
+async def test_github_tool_get_branch_missing_branch(github_tool):
+    """Test GitHubTool get_branch operation - missing branch parameter."""
+    result = await github_tool.execute(
+        operation="get_branch",
+        owner="user",
+        repo="repo",
+        # Missing branch parameter
+    )
+
+    assert result.success is False
+    assert "branch parameter required" in result.error
+
+
+@pytest.mark.asyncio
+async def test_github_tool_get_branch_missing_owner(github_tool):
+    """Test GitHubTool get_branch operation - missing owner parameter."""
+    result = await github_tool.execute(
+        operation="get_branch",
+        # Missing owner
+        repo="repo",
+        branch="main",
+    )
+
+    assert result.success is False
+    assert "owner and repo parameters required" in result.error

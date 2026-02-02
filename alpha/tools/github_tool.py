@@ -41,6 +41,8 @@ class GitHubTool(Tool):
     - list_reviews: List reviews on pull request
     - list_commits: List repository commits
     - get_commit: Get commit details
+    - list_branches: List repository branches
+    - get_branch: Get branch details
     - rate_limit: Check API rate limit status
     """
 
@@ -843,6 +845,70 @@ class GitHubTool(Tool):
                         "operation": "get_commit",
                         "repository": f"{owner}/{repo}",
                         "sha": sha,
+                    },
+                )
+
+            # ===== Branch Operations =====
+            elif operation == "list_branches":
+                if not owner or not repo:
+                    return ToolResult(
+                        success=False,
+                        output=None,
+                        error="owner and repo parameters required",
+                    )
+
+                max_pages = kwargs.get("max_pages", 5)
+
+                branches = self.client.list_branches(owner, repo, max_pages=max_pages)
+
+                return ToolResult(
+                    success=True,
+                    output={
+                        "count": len(branches),
+                        "branches": [
+                            {
+                                "name": b.name,
+                                "commit_sha": b.commit_sha[:8],
+                                "protected": b.protected,
+                                "commit_url": b.commit_url,
+                            }
+                            for b in branches
+                        ],
+                    },
+                    metadata={
+                        "operation": "list_branches",
+                        "repository": f"{owner}/{repo}",
+                    },
+                )
+
+            elif operation == "get_branch":
+                if not owner or not repo:
+                    return ToolResult(
+                        success=False,
+                        output=None,
+                        error="owner and repo parameters required",
+                    )
+
+                branch = kwargs.get("branch")
+                if not branch:
+                    return ToolResult(
+                        success=False, output=None, error="branch parameter required"
+                    )
+
+                branch_obj = self.client.get_branch(owner, repo, branch)
+
+                return ToolResult(
+                    success=True,
+                    output={
+                        "name": branch_obj.name,
+                        "commit_sha": branch_obj.commit_sha,
+                        "commit_url": branch_obj.commit_url,
+                        "protected": branch_obj.protected,
+                    },
+                    metadata={
+                        "operation": "get_branch",
+                        "repository": f"{owner}/{repo}",
+                        "branch": branch,
                     },
                 )
 

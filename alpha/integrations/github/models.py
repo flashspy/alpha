@@ -352,3 +352,25 @@ class Commit:
             html_url=data.get("html_url", ""),
             parents=[p.get("sha") for p in data.get("parents", [])],
         )
+
+
+@dataclass
+class Branch:
+    """Represents a GitHub branch."""
+
+    name: str
+    commit_sha: str
+    commit_url: str
+    protected: bool
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Branch":
+        """Create Branch from API response."""
+        commit = data.get("commit", {})
+
+        return cls(
+            name=data.get("name"),
+            commit_sha=commit.get("sha", ""),
+            commit_url=commit.get("url", ""),
+            protected=data.get("protected", False),
+        )

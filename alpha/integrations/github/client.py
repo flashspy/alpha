@@ -41,6 +41,7 @@ from alpha.integrations.github.models import (
     PullRequest,
     Comment,
     Commit,
+    Branch,
     GitHubUser,
 )
 
@@ -903,6 +904,55 @@ class GitHubClient:
         endpoint = f"repos/{owner}/{repo}/commits/{sha}"
         data = self._make_request("GET", endpoint)
         return Commit.from_dict(data)
+
+    # ===== Branch Operations =====
+
+    def list_branches(
+        self, owner: str, repo: str, max_pages: int = 5
+    ) -> List[Branch]:
+        """
+        List branches for a repository.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            max_pages: Maximum pages to fetch (default: 5)
+
+        Returns:
+            List of Branch objects
+
+        Example:
+            branches = client.list_branches("torvalds", "linux")
+            for branch in branches:
+                print(f"{branch.name}: {branch.commit_sha[:7]} (protected: {branch.protected})")
+        """
+        endpoint = f"repos/{owner}/{repo}/branches"
+        branches_data = self._paginate(endpoint, max_pages=max_pages)
+        return [Branch.from_dict(b) for b in branches_data]
+
+    def get_branch(self, owner: str, repo: str, branch: str) -> Branch:
+        """
+        Get detailed information about a specific branch.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            branch: Branch name
+
+        Returns:
+            Branch object with protection status and latest commit
+
+        Raises:
+            GitHubNotFoundError: If branch doesn't exist
+
+        Example:
+            branch = client.get_branch("facebook", "react", "main")
+            print(f"Latest commit: {branch.commit_sha}")
+            print(f"Protected: {branch.protected}")
+        """
+        endpoint = f"repos/{owner}/{repo}/branches/{branch}"
+        data = self._make_request("GET", endpoint)
+        return Branch.from_dict(data)
 
     # ===== Utility Methods =====
 
