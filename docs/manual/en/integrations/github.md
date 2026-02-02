@@ -172,6 +172,37 @@ alpha> Add comment to issue #5 in myuser/myrepo: "Working on a fix now"
 alpha> github add_comment owner=myuser repo=myrepo number=5 body="Working on a fix now"
 ```
 
+#### Update Issue ✨ NEW
+
+Update existing issues with new title, body, state, labels, or assignees:
+
+```bash
+# Update issue title and body
+alpha> Update issue #42 in myuser/myrepo title="Bug: Fixed login issue" body="This issue has been resolved"
+
+# Close an issue
+alpha> Close issue #42 in myuser/myrepo
+alpha> github update_issue owner=myuser repo=myrepo number=42 state=closed
+
+# Update labels
+alpha> github update_issue owner=myuser repo=myrepo number=42 labels=bug,fixed
+
+# Assign users
+alpha> github update_issue owner=myuser repo=myrepo number=42 assignees=user1,user2
+
+# Multiple updates at once
+alpha> github update_issue owner=myuser repo=myrepo number=42 title="Updated Title" state=closed labels=resolved
+```
+
+**Parameters:**
+- `title` (optional): New issue title
+- `body` (optional): New issue description
+- `state` (optional): `open` or `closed`
+- `labels` (optional): Comma-separated list of label names
+- `assignees` (optional): Comma-separated list of GitHub usernames
+
+**Note:** At least one parameter must be provided.
+
 ---
 
 ### Pull Request Management

@@ -449,6 +449,81 @@ class GitHubClient:
         data = self._make_request("POST", endpoint, json_data={"body": body})
         return Comment.from_dict(data)
 
+    def update_issue(
+        self,
+        owner: str,
+        repo: str,
+        issue_number: int,
+        title: Optional[str] = None,
+        body: Optional[str] = None,
+        state: Optional[str] = None,
+        labels: Optional[List[str]] = None,
+        assignees: Optional[List[str]] = None,
+    ) -> Issue:
+        """
+        Update an existing issue.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            issue_number: Issue number to update
+            title: New issue title (optional)
+            body: New issue body/description (optional)
+            state: New issue state - 'open' or 'closed' (optional)
+            labels: New list of label names (optional)
+            assignees: New list of usernames to assign (optional)
+
+        Returns:
+            Updated Issue object
+
+        Raises:
+            GitHubValidationError: If invalid parameters provided
+            GitHubNotFoundError: If issue not found
+            GitHubPermissionError: If no permission to update
+
+        Example:
+            # Update issue title and close it
+            client.update_issue("owner", "repo", 42,
+                              title="New Title",
+                              state="closed")
+
+            # Add labels
+            client.update_issue("owner", "repo", 42,
+                              labels=["bug", "urgent"])
+
+            # Assign to users
+            client.update_issue("owner", "repo", 42,
+                              assignees=["user1", "user2"])
+        """
+        # Validate state parameter
+        if state and state not in ["open", "closed"]:
+            raise GitHubValidationError(
+                f"Invalid state '{state}'. Must be 'open' or 'closed'."
+            )
+
+        endpoint = f"repos/{owner}/{repo}/issues/{issue_number}"
+        json_data = {}
+
+        # Only include provided parameters
+        if title is not None:
+            json_data["title"] = title
+        if body is not None:
+            json_data["body"] = body
+        if state is not None:
+            json_data["state"] = state
+        if labels is not None:
+            json_data["labels"] = labels
+        if assignees is not None:
+            json_data["assignees"] = assignees
+
+        if not json_data:
+            raise GitHubValidationError(
+                "At least one parameter (title, body, state, labels, or assignees) must be provided"
+            )
+
+        data = self._make_request("PATCH", endpoint, json_data=json_data)
+        return Issue.from_dict(data)
+
     # ===== Pull Request Operations =====
 
     def list_pull_requests(

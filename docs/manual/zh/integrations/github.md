@@ -172,6 +172,37 @@ alpha> 向myuser/myrepo的issue #5添加评论:"正在修复中"
 alpha> github add_comment owner=myuser repo=myrepo number=5 body="正在修复中"
 ```
 
+#### 更新Issue ✨ 新功能
+
+使用新的标题、正文、状态、标签或分配者更新现有issues:
+
+```bash
+# 更新issue标题和正文
+alpha> 更新myuser/myrepo的issue #42标题为"Bug: 已修复登录问题"正文为"此问题已解决"
+
+# 关闭issue
+alpha> 关闭myuser/myrepo的issue #42
+alpha> github update_issue owner=myuser repo=myrepo number=42 state=closed
+
+# 更新标签
+alpha> github update_issue owner=myuser repo=myrepo number=42 labels=bug,fixed
+
+# 分配用户
+alpha> github update_issue owner=myuser repo=myrepo number=42 assignees=user1,user2
+
+# 同时多次更新
+alpha> github update_issue owner=myuser repo=myrepo number=42 title="更新的标题" state=closed labels=resolved
+```
+
+**参数:**
+- `title` (可选): 新的issue标题
+- `body` (可选): 新的issue描述
+- `state` (可选): `open` 或 `closed`
+- `labels` (可选): 逗号分隔的标签名称列表
+- `assignees` (可选): 逗号分隔的GitHub用户名列表
+
+**注意:** 至少必须提供一个参数。
+
 ---
 
 ### Pull Request管理

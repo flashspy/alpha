@@ -30,6 +30,7 @@ class GitHubTool(Tool):
     - list_issues: List repository issues
     - get_issue: Get issue details
     - create_issue: Create new issue
+    - update_issue: Update existing issue (title, body, state, labels, assignees)
     - add_comment: Add comment to issue
     - list_prs: List pull requests
     - get_pr: Get pull request details
@@ -324,6 +325,78 @@ class GitHubTool(Tool):
                         "operation": "add_comment",
                         "repository": f"{owner}/{repo}",
                         "issue_number": number,
+                    },
+                )
+
+            elif operation == "update_issue":
+                if not owner or not repo or number is None:
+                    return ToolResult(
+                        success=False,
+                        output=None,
+                        error="owner, repo, and number parameters required",
+                    )
+
+                # Extract update parameters
+                title = kwargs.get("title")
+                body = kwargs.get("body")
+                state = kwargs.get("state")
+                labels = kwargs.get("labels")
+                assignees = kwargs.get("assignees")
+
+                # Validate that at least one parameter is provided
+                if not any([title, body, state, labels, assignees]):
+                    return ToolResult(
+                        success=False,
+                        output=None,
+                        error="At least one of title, body, state, labels, or assignees must be provided",
+                    )
+
+                # Validate state parameter
+                if state and state not in ["open", "closed"]:
+                    return ToolResult(
+                        success=False,
+                        output=None,
+                        error=f"Invalid state '{state}'. Must be 'open' or 'closed'",
+                    )
+
+                issue = self.client.update_issue(
+                    owner=owner,
+                    repo=repo,
+                    issue_number=number,
+                    title=title,
+                    body=body,
+                    state=state,
+                    labels=labels,
+                    assignees=assignees,
+                )
+
+                return ToolResult(
+                    success=True,
+                    output={
+                        "number": issue.number,
+                        "title": issue.title,
+                        "state": issue.state,
+                        "body": issue.body,
+                        "labels": [label.name for label in issue.labels],
+                        "assignees": [assignee.login for assignee in issue.assignees],
+                        "author": issue.user.login,
+                        "created_at": issue.created_at.isoformat(),
+                        "updated_at": issue.updated_at.isoformat() if issue.updated_at else None,
+                        "url": issue.html_url,
+                    },
+                    metadata={
+                        "operation": "update_issue",
+                        "repository": f"{owner}/{repo}",
+                        "issue_number": number,
+                        "updated_fields": [
+                            k for k, v in {
+                                "title": title,
+                                "body": body,
+                                "state": state,
+                                "labels": labels,
+                                "assignees": assignees
+                            }.items() if v is not None
+                        ],
                     },
                 )
 

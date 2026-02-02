@@ -20,6 +20,7 @@ from alpha.integrations.github.exceptions import (
     GitHubRateLimitError,
     GitHubNotFoundError,
     GitHubPermissionError,
+    GitHubValidationError,
 )
 from alpha.integrations.github.models import (
     GitHubUser,
@@ -778,6 +779,249 @@ async def test_github_tool_create_pr_draft(github_tool):
         assert result.success is True
         assert result.output["draft"] is True
         assert result.output["number"] == 99
+
+
+# ===== Issue Update Tests =====
+
+
+def test_client_update_issue(github_client):
+    """Test GitHubClient update_issue method - basic update."""
+    with patch.object(github_client, "_make_request") as mock_request:
+        mock_issue_data = {
+            "number": 42,
+            "title": "Updated Title",
+            "body": "Updated description",
+            "state": "open",
+            "labels": [{"name": "enhancement"}],
+            "assignees": [{"login": "user1"}],
+            "user": {"login": "creator"},
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-02T00:00:00Z",
+            "html_url": "https://github.com/user/repo/issues/42",
+        }
+        mock_request.return_value = mock_issue_data
+
+        issue = github_client.update_issue(
+            owner="user",
+            repo="repo",
+            issue_number=42,
+            title="Updated Title",
+            body="Updated description",
+        )
+
+        mock_request.assert_called_once_with(
+            "PATCH",
+            "repos/user/repo/issues/42",
+            json_data={"title": "Updated Title", "body": "Updated description"},
+        )
+        assert issue.number == 42
+        assert issue.title == "Updated Title"
+        assert issue.body == "Updated description"
+
+
+def test_client_update_issue_close(github_client):
+    """Test GitHubClient update_issue method - close issue."""
+    with patch.object(github_client, "_make_request") as mock_request:
+        mock_issue_data = {
+            "number": 42,
+            "title": "Test Issue",
+            "body": "Test description",
+            "state": "closed",
+            "labels": [],
+            "assignees": [],
+            "user": {"login": "creator"},
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-02T00:00:00Z",
+            "html_url": "https://github.com/user/repo/issues/42",
+        }
+        mock_request.return_value = mock_issue_data
+
+        issue = github_client.update_issue(
+            owner="user", repo="repo", issue_number=42, state="closed"
+        )
+
+        mock_request.assert_called_once_with(
+            "PATCH", "repos/user/repo/issues/42", json_data={"state": "closed"}
+        )
+        assert issue.state == "closed"
+
+
+def test_client_update_issue_validation_error(github_client):
+    """Test GitHubClient update_issue method - validation errors."""
+    # Test invalid state
+    with pytest.raises(GitHubValidationError, match="Invalid state"):
+        github_client.update_issue(
+            owner="user", repo="repo", issue_number=42, state="invalid"
+        )
+
+    # Test no parameters provided
+    with pytest.raises(GitHubValidationError, match="At least one parameter"):
+        github_client.update_issue(owner="user", repo="repo", issue_number=42)
+
+
+@pytest.mark.asyncio
+async def test_github_tool_update_issue_success(github_tool):
+    """Test GitHubTool update_issue operation - successful update."""
+    with patch.object(GitHubClient, "update_issue") as mock_update:
+        mock_issue = Mock()
+        mock_issue.number = 42
+        mock_issue.title = "Updated Title"
+        mock_issue.body = "Updated body"
+        mock_issue.state = "open"
+        mock_issue.labels = [Mock(name="bug")]
+        mock_issue.assignees = [Mock(login="user1")]
+        mock_issue.user = Mock(login="creator")
+        mock_issue.created_at = datetime(2024, 1, 1)
+        mock_issue.updated_at = datetime(2024, 1, 2)
+        mock_issue.html_url = "https://github.com/user/repo/issues/42"
+
+        mock_update.return_value = mock_issue
+
+        result = await github_tool.execute(
+            operation="update_issue",
+            owner="user",
+            repo="repo",
+            number=42,
+            title="Updated Title",
+            body="Updated body",
+        )
+
+        assert result.success is True
+        assert result.output["number"] == 42
+        assert result.output["title"] == "Updated Title"
+        assert result.output["body"] == "Updated body"
+        assert "updated_fields" in result.metadata
+        assert "title" in result.metadata["updated_fields"]
+        assert "body" in result.metadata["updated_fields"]
+
+
+@pytest.mark.asyncio
+async def test_github_tool_update_issue_missing_params(github_tool):
+    """Test GitHubTool update_issue operation - missing parameters."""
+    # Missing owner, repo, number
+    result = await github_tool.execute(operation="update_issue")
+    assert result.success is False
+    assert "owner, repo, and number parameters required" in result.error
+
+    # No update parameters provided
+    result = await github_tool.execute(
+        operation="update_issue", owner="user", repo="repo", number=42
+    )
+    assert result.success is False
+    assert "At least one of" in result.error
+
+
+@pytest.mark.asyncio
+async def test_github_tool_update_issue_invalid_state(github_tool):
+    """Test GitHubTool update_issue operation - invalid state."""
+    result = await github_tool.execute(
+        operation="update_issue",
+        owner="user",
+        repo="repo",
+        number=42,
+        state="invalid",
+    )
+
+    assert result.success is False
+    assert "Invalid state" in result.error
+
+
+@pytest.mark.asyncio
+async def test_github_tool_update_issue_labels(github_tool):
+    """Test GitHubTool update_issue operation - update labels."""
+    with patch.object(GitHubClient, "update_issue") as mock_update:
+        mock_issue = Mock()
+        mock_issue.number = 42
+        mock_issue.title = "Test"
+        mock_issue.body = "Test"
+        mock_issue.state = "open"
+        # Create label mocks with .name attribute
+        mock_label_bug = Mock()
+        mock_label_bug.name = "bug"
+        mock_label_urgent = Mock()
+        mock_label_urgent.name = "urgent"
+        mock_issue.labels = [mock_label_bug, mock_label_urgent]
+        mock_issue.assignees = []
+        mock_issue.user = Mock(login="creator")
+        mock_issue.created_at = datetime(2024, 1, 1)
+        mock_issue.updated_at = datetime(2024, 1, 2)
+        mock_issue.html_url = "https://github.com/user/repo/issues/42"
+
+        mock_update.return_value = mock_issue
+
+        result = await github_tool.execute(
+            operation="update_issue",
+            owner="user",
+            repo="repo",
+            number=42,
+            labels=["bug", "urgent"],
+        )
+
+        assert result.success is True
+        assert result.output["labels"] == ["bug", "urgent"]
+        assert "labels" in result.metadata["updated_fields"]
+
+
+@pytest.mark.asyncio
+async def test_github_tool_update_issue_close(github_tool):
+    """Test GitHubTool update_issue operation - close issue."""
+    with patch.object(GitHubClient, "update_issue") as mock_update:
+        mock_issue = Mock()
+        mock_issue.number = 42
+        mock_issue.title = "Test"
+        mock_issue.body = "Test"
+        mock_issue.state = "closed"
+        mock_issue.labels = []
+        mock_issue.assignees = []
+        mock_issue.user = Mock(login="creator")
+        mock_issue.created_at = datetime(2024, 1, 1)
+        mock_issue.updated_at = datetime(2024, 1, 2)
+        mock_issue.html_url = "https://github.com/user/repo/issues/42"
+
+        mock_update.return_value = mock_issue
+
+        result = await github_tool.execute(
+            operation="update_issue",
+            owner="user",
+            repo="repo",
+            number=42,
+            state="closed",
+        )
+
+        assert result.success is True
+        assert result.output["state"] == "closed"
+        assert "state" in result.metadata["updated_fields"]
+
+
+@pytest.mark.asyncio
+async def test_github_tool_update_issue_assignees(github_tool):
+    """Test GitHubTool update_issue operation - update assignees."""
+    with patch.object(GitHubClient, "update_issue") as mock_update:
+        mock_issue = Mock()
+        mock_issue.number = 42
+        mock_issue.title = "Test"
+        mock_issue.body = "Test"
+        mock_issue.state = "open"
+        mock_issue.labels = []
+        mock_issue.assignees = [Mock(login="user1"), Mock(login="user2")]
+        mock_issue.user = Mock(login="creator")
+        mock_issue.created_at = datetime(2024, 1, 1)
+        mock_issue.updated_at = datetime(2024, 1, 2)
+        mock_issue.html_url = "https://github.com/user/repo/issues/42"
+
+        mock_update.return_value = mock_issue
+
+        result = await github_tool.execute(
+            operation="update_issue",
+            owner="user",
+            repo="repo",
+            number=42,
+            assignees=["user1", "user2"],
+        )
+
+        assert result.success is True
+        assert result.output["assignees"] == ["user1", "user2"]
+        assert "assignees" in result.metadata["updated_fields"]
 
 
 if __name__ == "__main__":
