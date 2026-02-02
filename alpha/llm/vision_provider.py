@@ -164,16 +164,58 @@ class ClaudeVisionProvider(LLMProvider):
             cost_usd=cost,
         )
 
-    async def stream_complete(self, messages: List[VisionMessage], **kwargs):
+    async def stream_complete(
+        self,
+        messages: List[VisionMessage],
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        system: Optional[str] = None,
+        **kwargs,
+    ):
         """
-        Stream completion (vision models support streaming)
+        Stream completion with vision support
 
-        Note: For simplicity, using non-streaming for now.
-        Full streaming implementation can be added later.
+        Args:
+            messages: List of VisionMessage objects (can include images)
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            system: Optional system prompt
+            **kwargs: Additional parameters
+
+        Yields:
+            Text chunks as they arrive
+
+        Note:
+            Token usage and cost information not available during streaming.
+            Use complete() method if you need detailed usage stats.
         """
-        # For now, use non-streaming and yield the complete response
-        response = await self.complete(messages, **kwargs)
-        yield response.content
+        if not self.supports_vision():
+            logger.warning(
+                f"Model {self.model} may not support vision, "
+                "images may be ignored"
+            )
+
+        # Check if any message has images
+        has_images = any(msg.has_images() for msg in messages)
+
+        if has_images:
+            self.logger.info(
+                f"Sending streaming vision request with {len(messages)} messages "
+                f"(contains images)"
+            )
+
+        # Convert messages to API format
+        api_messages = self._convert_messages(messages)
+
+        # Stream from Claude API
+        async for text_chunk in self.client.stream_message(
+            model=self.model,
+            messages=api_messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system,
+        ):
+            yield text_chunk
 
     async def analyze_image(
         self,
