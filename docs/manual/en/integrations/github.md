@@ -1,6 +1,6 @@
 # GitHub Integration User Guide
 
-**Alpha v1.1 - Phase 11.1 Feature**
+**Alpha v1.2 - Phase 11.2 Feature**
 
 ---
 
@@ -27,6 +27,8 @@ The GitHub Integration feature enables Alpha to interact directly with GitHub re
 - List pull requests by state
 - View PR details and merge status
 - Check PR mergability and CI status
+- **Create new pull requests** ✨ NEW
+- Support for draft PRs
 
 ✅ **Commit History**
 - Browse commit history
@@ -205,6 +207,36 @@ alpha> github get_pr owner=facebook repo=react number=456
 - Commits, additions, deletions
 - Changed files count
 - Labels and assignees
+
+#### Create Pull Request ✨ NEW
+
+```bash
+# Using natural language
+alpha> Create a PR in myuser/myrepo from feature-branch to main titled "Add new feature"
+
+# Explicit call with full options
+alpha> github create_pr owner=myuser repo=myrepo title="Add new feature" head=feature-branch base=main body="This PR implements the new feature discussed in issue #42"
+
+# Create draft PR
+alpha> github create_pr owner=myuser repo=myrepo title="WIP: Work in progress" head=wip-feature base=develop draft=true body="Still working on tests"
+```
+
+**Parameters:**
+- `owner` (required): Repository owner username
+- `repo` (required): Repository name
+- `title` (required): Pull request title
+- `head` (required): Source branch (where your changes are)
+- `base` (required): Target branch (where you want to merge)
+- `body` (optional): PR description
+- `draft` (optional): Create as draft PR (default: false)
+- `maintainer_can_modify` (optional): Allow maintainers to edit (default: true)
+
+**Output:**
+- PR number
+- PR title and URL
+- Source and target branch names
+- Draft status
+- Current state (open)
 
 ---
 
@@ -410,15 +442,15 @@ alpha> List PRs for myorg/project state=open sort=created direction=asc
 
 ## Limitations
 
-⚠️ **Current Limitations** (Phase 11.1):
-- No PR creation or merging (view only)
+⚠️ **Current Limitations** (Phase 11.2):
+- No PR merging (view and create only)
 - No issue editing (create and comment only)
 - No branch operations
 - No webhooks or real-time notifications
 - No GitHub Actions integration
 
-**Coming in Phase 11.2**:
-- Full PR management (create, merge, review)
+**Coming in Future Phases**:
+- Full PR management (merge, review, approve)
 - Issue editing and closing
 - Branch management
 - Webhook support for real-time updates
@@ -454,6 +486,6 @@ A: Ensure your token has the `repo` scope, which grants access to private reposi
 
 ---
 
-**Version**: 1.1 (Phase 11.1)
+**Version**: 1.2 (Phase 11.2)
 **Last Updated**: 2026-02-03
 **Status**: Production Ready ✅

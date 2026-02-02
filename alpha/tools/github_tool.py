@@ -33,6 +33,7 @@ class GitHubTool(Tool):
     - add_comment: Add comment to issue
     - list_prs: List pull requests
     - get_pr: Get pull request details
+    - create_pr: Create new pull request
     - list_commits: List repository commits
     - get_commit: Get commit details
     - rate_limit: Check API rate limit status
@@ -413,6 +414,64 @@ class GitHubTool(Tool):
                         "operation": "get_pr",
                         "repository": f"{owner}/{repo}",
                         "pr_number": number,
+                    },
+                )
+
+            elif operation == "create_pr":
+                if not owner or not repo:
+                    return ToolResult(
+                        success=False,
+                        output=None,
+                        error="owner and repo parameters required",
+                    )
+
+                title = kwargs.get("title")
+                if not title:
+                    return ToolResult(
+                        success=False, output=None, error="title parameter required"
+                    )
+
+                head = kwargs.get("head")
+                if not head:
+                    return ToolResult(
+                        success=False, output=None, error="head parameter required (source branch)"
+                    )
+
+                base = kwargs.get("base")
+                if not base:
+                    return ToolResult(
+                        success=False, output=None, error="base parameter required (target branch)"
+                    )
+
+                body = kwargs.get("body")
+                draft = kwargs.get("draft", False)
+                maintainer_can_modify = kwargs.get("maintainer_can_modify", True)
+
+                pr = self.client.create_pull_request(
+                    owner,
+                    repo,
+                    title,
+                    head,
+                    base,
+                    body=body,
+                    draft=draft,
+                    maintainer_can_modify=maintainer_can_modify,
+                )
+
+                return ToolResult(
+                    success=True,
+                    output={
+                        "number": pr.number,
+                        "title": pr.title,
+                        "url": pr.html_url,
+                        "state": pr.state,
+                        "head_ref": pr.head_ref,
+                        "base_ref": pr.base_ref,
+                        "draft": pr.draft,
+                    },
+                    metadata={
+                        "operation": "create_pr",
+                        "repository": f"{owner}/{repo}",
                     },
                 )
 

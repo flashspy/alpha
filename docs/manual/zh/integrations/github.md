@@ -1,6 +1,6 @@
 # GitHub 集成用户指南
 
-**Alpha v1.1 - Phase 11.1 功能**
+**Alpha v1.2 - Phase 11.2 功能**
 
 ---
 
@@ -27,6 +27,8 @@ GitHub集成功能使Alpha能够通过自然语言命令或显式工具调用直
 - 按状态列出pull requests
 - 查看PR详情和合并状态
 - 检查PR可合并性和CI状态
+- **创建新的pull requests** ✨ 新功能
+- 支持draft（草稿）PR
 
 ✅ **提交历史**
 - 浏览提交历史
@@ -205,6 +207,36 @@ alpha> github get_pr owner=facebook repo=react number=456
 - Commits、additions、deletions
 - 更改的文件数量
 - 标签和受理人
+
+#### 创建Pull Request ✨ 新功能
+
+```bash
+# 使用自然语言
+alpha> 在myuser/myrepo中从feature-branch到main创建PR,标题为"添加新功能"
+
+# 使用完整选项的显式调用
+alpha> github create_pr owner=myuser repo=myrepo title="添加新功能" head=feature-branch base=main body="此PR实现了issue #42中讨论的新功能"
+
+# 创建草稿PR
+alpha> github create_pr owner=myuser repo=myrepo title="WIP: 进行中的工作" head=wip-feature base=develop draft=true body="仍在编写测试"
+```
+
+**参数:**
+- `owner` (必需): 仓库所有者用户名
+- `repo` (必需): 仓库名称
+- `title` (必需): Pull request标题
+- `head` (必需): 源分支(您的更改所在位置)
+- `base` (必需): 目标分支(您想要合并到的位置)
+- `body` (可选): PR描述
+- `draft` (可选): 创建为草稿PR (默认: false)
+- `maintainer_can_modify` (可选): 允许维护者编辑 (默认: true)
+
+**输出:**
+- PR编号
+- PR标题和URL
+- 源分支和目标分支名称
+- 草稿状态
+- 当前状态(open)
 
 ---
 
@@ -410,15 +442,15 @@ alpha> 列出myorg/project的PRs,状态为开放,按创建时间升序排序
 
 ## 限制
 
-⚠️ **当前限制**(Phase 11.1):
-- 无PR创建或合并(仅查看)
+⚠️ **当前限制**(Phase 11.2):
+- 无PR合并(仅查看和创建)
 - 无issue编辑(仅创建和评论)
 - 无分支操作
 - 无webhooks或实时通知
 - 无GitHub Actions集成
 
-**Phase 11.2即将推出**:
-- 完整PR管理(创建、合并、审查)
+**未来阶段计划**:
+- 完整PR管理(合并、审查、批准)
 - Issue编辑和关闭
 - 分支管理
 - Webhook支持实时更新
@@ -454,6 +486,6 @@ alpha> 列出myorg/project的PRs,状态为开放,按创建时间升序排序
 
 ---
 
-**版本**: 1.1 (Phase 11.1)
+**版本**: 1.2 (Phase 11.2)
 **最后更新**: 2026-02-03
 **状态**: 生产就绪 ✅

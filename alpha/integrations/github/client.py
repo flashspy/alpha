@@ -500,6 +500,65 @@ class GitHubClient:
         data = self._make_request("GET", endpoint)
         return PullRequest.from_dict(data)
 
+    def create_pull_request(
+        self,
+        owner: str,
+        repo: str,
+        title: str,
+        head: str,
+        base: str,
+        body: Optional[str] = None,
+        draft: bool = False,
+        maintainer_can_modify: bool = True,
+    ) -> PullRequest:
+        """
+        Create a new pull request.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            title: Pull request title
+            head: The name of the branch where your changes are implemented (source branch)
+            base: The name of the branch you want to merge changes into (target branch)
+            body: Pull request description
+            draft: Create as draft pull request (default: False)
+            maintainer_can_modify: Allow maintainers to edit the PR (default: True)
+
+        Returns:
+            Created PullRequest object
+
+        Raises:
+            GitHubValidationError: If branch doesn't exist or validation fails
+            GitHubPermissionError: If user lacks permission to create PR
+
+        Example:
+            pr = client.create_pull_request(
+                owner="octocat",
+                repo="hello-world",
+                title="Add new feature",
+                head="feature-branch",
+                base="main",
+                body="This PR implements a new feature",
+                draft=False
+            )
+        """
+        endpoint = f"repos/{owner}/{repo}/pulls"
+        json_data = {
+            "title": title,
+            "head": head,
+            "base": base,
+            "maintainer_can_modify": maintainer_can_modify,
+        }
+
+        if body:
+            json_data["body"] = body
+
+        if draft:
+            json_data["draft"] = draft
+
+        data = self._make_request("POST", endpoint, json_data=json_data)
+        return PullRequest.from_dict(data)
+
     # ===== Commit Operations =====
 
     def list_commits(

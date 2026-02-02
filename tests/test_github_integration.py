@@ -538,5 +538,247 @@ async def test_github_tool_missing_params(github_tool):
     assert "owner and repo" in result.error.lower()
 
 
+# ===== Pull Request Creation Tests =====
+
+
+@pytest.mark.asyncio
+async def test_client_create_pull_request():
+    """Test GitHubClient.create_pull_request()."""
+    with patch("requests.Session") as mock_session_class:
+        mock_session = MagicMock()
+        mock_session_class.return_value = mock_session
+
+        mock_response = Mock()
+        mock_response.ok = True
+        mock_response.status_code = 201
+        mock_response.json.return_value = {
+            "id": 1,
+            "number": 1347,
+            "title": "Amazing new feature",
+            "body": "Please merge this",
+            "state": "open",
+            "user": {
+                "login": "octocat",
+                "id": 1,
+                "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+                "html_url": "https://github.com/octocat",
+            },
+            "head": {"ref": "feature-branch"},
+            "base": {"ref": "main"},
+            "draft": False,
+            "merged": False,
+            "mergeable": True,
+            "mergeable_state": "clean",
+            "labels": [],
+            "assignees": [],
+            "milestone": None,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "merged_at": None,
+            "closed_at": None,
+            "html_url": "https://github.com/octocat/Hello-World/pull/1347",
+            "commits": 1,
+            "additions": 100,
+            "deletions": 3,
+            "changed_files": 5,
+        }
+        mock_response.headers = {
+            "X-RateLimit-Remaining": "5000",
+            "X-RateLimit-Reset": "1234567890",
+        }
+
+        mock_session.request.return_value = mock_response
+
+        client = GitHubClient(token="fake_token")
+        pr = client.create_pull_request(
+            owner="octocat",
+            repo="Hello-World",
+            title="Amazing new feature",
+            head="feature-branch",
+            base="main",
+            body="Please merge this",
+        )
+
+        assert pr.number == 1347
+        assert pr.title == "Amazing new feature"
+        assert pr.head_ref == "feature-branch"
+        assert pr.base_ref == "main"
+        assert pr.draft is False
+        assert pr.state == "open"
+
+
+@pytest.mark.asyncio
+async def test_client_create_draft_pull_request():
+    """Test GitHubClient.create_pull_request() with draft=True."""
+    with patch("requests.Session") as mock_session_class:
+        mock_session = MagicMock()
+        mock_session_class.return_value = mock_session
+
+        mock_response = Mock()
+        mock_response.ok = True
+        mock_response.status_code = 201
+        mock_response.json.return_value = {
+            "id": 2,
+            "number": 1348,
+            "title": "Work in progress",
+            "body": "Not ready yet",
+            "state": "open",
+            "user": {
+                "login": "octocat",
+                "id": 1,
+                "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+                "html_url": "https://github.com/octocat",
+            },
+            "head": {"ref": "wip-feature"},
+            "base": {"ref": "main"},
+            "draft": True,
+            "merged": False,
+            "mergeable": None,
+            "mergeable_state": "unknown",
+            "labels": [],
+            "assignees": [],
+            "milestone": None,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "merged_at": None,
+            "closed_at": None,
+            "html_url": "https://github.com/octocat/Hello-World/pull/1348",
+            "commits": 2,
+            "additions": 50,
+            "deletions": 10,
+            "changed_files": 3,
+        }
+        mock_response.headers = {
+            "X-RateLimit-Remaining": "5000",
+            "X-RateLimit-Reset": "1234567890",
+        }
+
+        mock_session.request.return_value = mock_response
+
+        client = GitHubClient(token="fake_token")
+        pr = client.create_pull_request(
+            owner="octocat",
+            repo="Hello-World",
+            title="Work in progress",
+            head="wip-feature",
+            base="main",
+            body="Not ready yet",
+            draft=True,
+        )
+
+        assert pr.number == 1348
+        assert pr.draft is True
+        assert pr.title == "Work in progress"
+
+
+@pytest.mark.asyncio
+async def test_github_tool_create_pr_success(github_tool):
+    """Test GitHubTool create_pr operation - success case."""
+    with patch.object(GitHubClient, "create_pull_request") as mock_create:
+        mock_pr = Mock()
+        mock_pr.number = 42
+        mock_pr.title = "Add new feature"
+        mock_pr.html_url = "https://github.com/user/repo/pull/42"
+        mock_pr.state = "open"
+        mock_pr.head_ref = "feature"
+        mock_pr.base_ref = "main"
+        mock_pr.draft = False
+
+        mock_create.return_value = mock_pr
+
+        result = await github_tool.execute(
+            operation="create_pr",
+            owner="user",
+            repo="repo",
+            title="Add new feature",
+            head="feature",
+            base="main",
+            body="This adds a cool feature",
+        )
+
+        assert result.success is True
+        assert result.output["number"] == 42
+        assert result.output["title"] == "Add new feature"
+        assert result.output["head_ref"] == "feature"
+        assert result.output["base_ref"] == "main"
+        assert result.output["draft"] is False
+        mock_create.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_github_tool_create_pr_missing_title(github_tool):
+    """Test GitHubTool create_pr operation - missing title."""
+    result = await github_tool.execute(
+        operation="create_pr",
+        owner="user",
+        repo="repo",
+        head="feature",
+        base="main",
+    )
+
+    assert result.success is False
+    assert "title parameter required" in result.error.lower()
+
+
+@pytest.mark.asyncio
+async def test_github_tool_create_pr_missing_head(github_tool):
+    """Test GitHubTool create_pr operation - missing head branch."""
+    result = await github_tool.execute(
+        operation="create_pr",
+        owner="user",
+        repo="repo",
+        title="Test PR",
+        base="main",
+    )
+
+    assert result.success is False
+    assert "head parameter required" in result.error.lower()
+
+
+@pytest.mark.asyncio
+async def test_github_tool_create_pr_missing_base(github_tool):
+    """Test GitHubTool create_pr operation - missing base branch."""
+    result = await github_tool.execute(
+        operation="create_pr",
+        owner="user",
+        repo="repo",
+        title="Test PR",
+        head="feature",
+    )
+
+    assert result.success is False
+    assert "base parameter required" in result.error.lower()
+
+
+@pytest.mark.asyncio
+async def test_github_tool_create_pr_draft(github_tool):
+    """Test GitHubTool create_pr operation - draft PR."""
+    with patch.object(GitHubClient, "create_pull_request") as mock_create:
+        mock_pr = Mock()
+        mock_pr.number = 99
+        mock_pr.title = "WIP: Draft feature"
+        mock_pr.html_url = "https://github.com/user/repo/pull/99"
+        mock_pr.state = "open"
+        mock_pr.head_ref = "draft-feature"
+        mock_pr.base_ref = "develop"
+        mock_pr.draft = True
+
+        mock_create.return_value = mock_pr
+
+        result = await github_tool.execute(
+            operation="create_pr",
+            owner="user",
+            repo="repo",
+            title="WIP: Draft feature",
+            head="draft-feature",
+            base="develop",
+            draft=True,
+        )
+
+        assert result.success is True
+        assert result.output["draft"] is True
+        assert result.output["number"] == 99
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
