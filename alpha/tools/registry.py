@@ -20,6 +20,8 @@ import aiohttp
 import pytz
 from dateutil import parser as date_parser
 
+from ..utils.safe_eval import safe_eval_math
+
 logger = logging.getLogger(__name__)
 
 
@@ -748,37 +750,11 @@ class CalculatorTool(Tool):
         }
 
     def _safe_eval(self, expression: str) -> float:
-        """Safely evaluate mathematical expression."""
-        # Remove whitespace
-        expr = expression.strip()
-
-        # Replace constants first
-        expr_lower = expr.lower()
-        expr_lower = expr_lower.replace('pi', str(math.pi))
-        expr_lower = expr_lower.replace('e', str(math.e))
-
-        # For function calls, use a more permissive pattern
-        # Allow function names and numbers/operators
-        allowed_chars = r'^[0-9+\-*/().,\s]+$'
-        # Check if expression has function calls
-        has_functions = any(func in expr.lower() for func in self.safe_functions.keys() if isinstance(func, str))
-
-        if not has_functions:
-            # Simple expression, strict validation
-            if not re.match(allowed_chars, expr_lower):
-                raise ValueError("Expression contains invalid characters")
-
-        # Replace constants in original expression
-        expr = expr.replace('pi', str(math.pi))
-        expr = expr.replace('e', str(math.e))
-
-        # Create safe namespace
-        safe_dict = {"__builtins__": {}}
-        safe_dict.update(self.safe_functions)
-
+        """Safely evaluate mathematical expression using AST-based evaluator."""
         try:
-            result = eval(expr, safe_dict)
-            return float(result)
+            # Use safe AST-based expression evaluator instead of eval()
+            # This prevents code injection attacks
+            return safe_eval_math(expression)
         except Exception as e:
             raise ValueError(f"Invalid expression: {str(e)}")
 

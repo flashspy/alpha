@@ -18,6 +18,7 @@ from .definition import (
     StepErrorStrategy,
     RetryConfig,
 )
+from ..utils.safe_eval import safe_eval_condition
 
 
 @dataclass
@@ -454,12 +455,16 @@ class WorkflowExecutor:
         Returns:
             True if condition is met, False otherwise
         """
-        # Simple condition evaluation (can be enhanced)
-        # For now, just interpolate and evaluate as Python expression
+        # Simple condition evaluation using safe AST-based evaluator
         try:
             interpolated = self._interpolate_string(condition, context)
-            # Note: In production, use a safe expression evaluator
-            return bool(eval(interpolated))
+            # Use safe expression evaluator instead of eval()
+            # Build context dict from ExecutionContext
+            eval_context = {
+                **context.parameters,
+                **context.step_outputs,
+            }
+            return safe_eval_condition(interpolated, eval_context)
         except Exception:
             return False
 

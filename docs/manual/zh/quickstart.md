@@ -4,7 +4,7 @@
 
 ### 1. Clone or navigate to project directory
 ```bash
-cd /path/to/agents-7b5dad6160
+cd /path/to/alpha
 ```
 
 ### 2. Create virtual environment
